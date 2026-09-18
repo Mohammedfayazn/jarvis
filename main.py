@@ -11,6 +11,7 @@ from google import genai
 from google.genai import types
 from websockets.exceptions import ConnectionClosed
 
+import browser_tools
 import ui_server
 from prompts import instruction
 
@@ -39,6 +40,100 @@ STABLE_SECONDS = 30   # Itni der chala toh backoff reset kar do
 
 # HUD ko har 20ms wala level bhejna bekaar hai - har teesra chunk kaafi hai
 LEVEL_EVERY = 3
+
+# "So jao" ke baad alvida ka itna intezaar - model turn khatam na kare toh
+# bhi Jarvis itne second me band ho jayega
+SLEEP_FALLBACK = 15
+
+# Jo tools Jarvis awaaz se chala sakta hai
+TOOLS = [
+    types.Tool(
+        function_declarations=[
+            types.FunctionDeclaration(
+                name="close_unused_browser_windows",
+                description=(
+                    "Har khuli browser window band karta hai, siwaye us ek ke "
+                    "jo abhi saamne hai aur Jarvis ke apne HUD ke. Tab chalao "
+                    "jab user kahe jaise 'bekaar browser band kar do', 'extra "
+                    "browser windows close karo'. Dhyan rahe: poori window "
+                    "jati hai, uske saare tabs ke saath. Chalane ke baad user "
+                    "ko batao ki kaun si windows band ki."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={},
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="close_unused_browser_tabs",
+                description=(
+                    "Kaam wali browser window ke faltu TABS band karta hai - "
+                    "kaam wala tab aur Jarvis ki apni screen chhod kar. Tab "
+                    "chalao jab user tabs band karne ko kahe: 'faltu tabs "
+                    "band karo', 'bas yeh wala tab rakho', 'baaki tabs "
+                    "close karo'. Agar user ne bataya kaunsa rakhna hai, "
+                    "`keep` me do. Nateeje me `needs_choice` aaye toh kuch "
+                    "band nahi hua - `tabs` me se kuch naam padh kar user se "
+                    "poochho kaunsa rakhna hai, phir `keep` ke saath dobara "
+                    "chalao. User ko nateeje ka `message` batao."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "keep": types.Schema(
+                            type=types.Type.STRING,
+                            description=(
+                                "Jis tab ko rakhna hai uske title ka hissa, "
+                                "jaise 'GitHub', 'YouTube', 'Gmail'. Sirf "
+                                "tab do jab user ne khud bataya ho."
+                            ),
+                        ),
+                    },
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="play_on_youtube",
+                description=(
+                    "YouTube par gaana ya video dhoondh kar browser me chala "
+                    "deta hai. Tab chalao jab user kuch bajane ko kahe - "
+                    "'Arijit ka tum hi ho laga do', 'koi lofi chala do', "
+                    "'YouTube pe ... play karo'. Chalane ke baad user ko "
+                    "chhote me batao kya laga diya."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "query": types.Schema(
+                            type=types.Type.STRING,
+                            description=(
+                                "YouTube search - gaane ka naam aur artist, "
+                                "jaise 'tum hi ho arijit singh'. User ki "
+                                "baat ka matlab likho, uske poore shabd nahi "
+                                "('bhai woh gaana laga do' nahi)."
+                            ),
+                        ),
+                    },
+                    required=["query"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="go_to_sleep",
+                description=(
+                    "Jarvis ko sula deta hai - baatcheet khatam aur program "
+                    "band. Sirf tab chalao jab user saaf taur par JARVIS ko "
+                    "rukne ya sone ko kahe: 'Jarvis so jao', 'bas karo "
+                    "Jarvis', 'Jarvis stop', 'good night Jarvis'. Gaane ke "
+                    "bol ya background awaaz me 'stop' aaye toh MAT chalao. "
+                    "Ek chhota sa alvida bolo."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={},
+                ),
+            ),
+        ]
+    )
+]
 
 
 class Playback:
@@ -135,54 +230,156 @@ async def send_loop(session, mic_queue, playback):
         )
 
 
-async def receive_loop(session, spk_queue, bus):
-    """Gemini se audio aur transcripts leta hai."""
+async def handle_tool_call(session, tool_call, bus, sleep_event):
+    """Jarvis ne koi tool maanga hai - chalao aur nateeja wapas bhejo.
+
+    True lautata hai agar Jarvis ko sone ko kaha gaya - receive_loop phir
+    alvida poora hone deta hai aur tab session band karta hai.
+    """
+    responses = []
+    sleep_requested = False
+
+    for call in tool_call.function_calls or []:
+        if call.name == "go_to_sleep":
+            sleep_requested = True
+            result = {"ok": True, "message": "Jarvis ab so jayega."}
+            print("\U0001f4a4 Jarvis so raha hai...")
+            bus.transcript("system", "Jarvis so raha hai")
+            # Model turn_complete na bheje toh bhi atke nahi
+            asyncio.get_running_loop().call_later(SLEEP_FALLBACK, sleep_event.set)
+        elif call.name == "close_unused_browser_windows":
+            # Win32 calls blocking hain - loop ko rokne ki zaroorat nahi
+            result = await asyncio.to_thread(
+                browser_tools.close_unused_browser_windows
+            )
+            note = result.get("message") or result.get("error", "")
+            print(f"\U0001f9f9 {note}")
+            bus.transcript("system", note)
+        elif call.name == "close_unused_browser_tabs":
+            keep = (call.args or {}).get("keep")
+            # PowerShell + UI Automation - kuch second lagte hain, loop se bahar
+            result = await asyncio.to_thread(
+                browser_tools.close_unused_browser_tabs, keep
+            )
+            note = result.get("message") or result.get("error", "")
+            print(f"\U0001f5c2️ {note}")
+            bus.transcript("system", note)
+        elif call.name == "play_on_youtube":
+            query = (call.args or {}).get("query", "")
+            # Network + browser kholna - dono blocking, loop se bahar
+            result = await asyncio.to_thread(browser_tools.play_on_youtube, query)
+            note = result.get("message", "YouTube nahi khul paya")
+            print(f"\U0001f3b5 {note}")
+            bus.transcript("system", note)
+        else:
+            result = {"error": f"'{call.name}' naam ka koi tool nahi hai."}
+
+        responses.append(
+            types.FunctionResponse(id=call.id, name=call.name, response=result)
+        )
+
+    if responses:
+        await session.send_tool_response(function_responses=responses)
+
+    return sleep_requested
+
+
+async def wait_for_playback(spk_queue, playback, timeout=SLEEP_FALLBACK):
+    """Jo bol raha hai use poora bolne dein - alvida beech me na kate."""
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while (playback.playing or not spk_queue.empty()) and loop.time() < deadline:
+        await asyncio.sleep(0.1)
+    # stream.write buffer me daal kar lautta hai, speaker tak pahunchne me
+    # thoda aur lagta hai
+    await asyncio.sleep(0.4)
+
+
+async def receive_loop(session, spk_queue, playback, bus, sleep_event):
+    """Gemini se audio aur transcripts leta hai - har turn, lagataar.
+
+    `session.receive()` sirf EK model turn deta hai aur turn_complete par ruk
+    jata hai. Pehle yahan bas ek `async for` tha, toh pehle jawab ke baad
+    connection koi padhta hi nahi tha: Jarvis behra ho jata tha. Upar se
+    na-padhe messages jama hote-hote websockets ne socket padhna hi band kar
+    diya, keepalive pong nahi dikha, aur ~20s baad connection 1011 se tut
+    jata tha. Isliye bahar `while True`.
+    """
     user_buf, model_buf = [], []
-    async for response in session.receive():
-        sc = response.server_content
-        if not sc:
-            continue
+    sleep_pending = False
 
-        # Audio model response speaker queue me daalein
-        if sc.model_turn:
-            for part in sc.model_turn.parts or []:
-                if part.inline_data:
-                    try:
-                        spk_queue.put_nowait(part.inline_data.data)
-                    except queue.Full:
-                        # Playback itna peeche hai ki catch-up nahi hoga -
-                        # purana chunk chhod dein taaki latency na badhe.
+    while True:
+        async for response in session.receive():
+            # Tool call alag rasta hai - iske saath server_content nahi aata
+            if response.tool_call:
+                if await handle_tool_call(
+                    session, response.tool_call, bus, sleep_event
+                ):
+                    sleep_pending = True
+                continue
+
+            sc = response.server_content
+            if not sc:
+                continue
+
+            # Audio model response speaker queue me daalein
+            if sc.model_turn:
+                for part in sc.model_turn.parts or []:
+                    if part.inline_data:
                         try:
-                            spk_queue.get_nowait()
                             spk_queue.put_nowait(part.inline_data.data)
-                        except (queue.Empty, queue.Full):
-                            pass
+                        except queue.Full:
+                            # Playback itna peeche hai ki catch-up nahi hoga -
+                            # purana chunk chhod dein taaki latency na badhe.
+                            try:
+                                spk_queue.get_nowait()
+                                spk_queue.put_nowait(part.inline_data.data)
+                            except (queue.Empty, queue.Full):
+                                pass
 
-        # Transcriptions collect karein
-        if sc.input_transcription:
-            t = sc.input_transcription.text.strip()
-            if t: user_buf.append(t)
+            # Transcriptions collect karein
+            if sc.input_transcription:
+                t = sc.input_transcription.text.strip()
+                if t:
+                    user_buf.append(t)
+                    # Aapki baat pakad li - ab jawab ban raha hai. Yahi woh lamha
+                    # hai jab user ko rukna chahiye, isliye HUD par alag dikhta hai.
+                    if not playback.playing:
+                        bus.state("thinking")
 
-        if sc.output_transcription:
-            t = sc.output_transcription.text.strip()
-            if t: model_buf.append(t)
+            if sc.output_transcription:
+                t = sc.output_transcription.text.strip()
+                if t: model_buf.append(t)
 
-        # Turn complete hone par console aur HUD dono par bhejein
-        if sc.turn_complete:
-            if user_buf:
-                text = " ".join(user_buf)
-                print(f"\U0001f464 User: {text}")
-                bus.transcript("user", text)
-                user_buf.clear()
-            if model_buf:
-                text = " ".join(model_buf)
-                print(f"\U0001f916 Jarvis: {text}")
-                bus.transcript("jarvis", text)
-                model_buf.clear()
+            # Turn complete hone par console aur HUD dono par bhejein
+            if sc.turn_complete:
+                if user_buf:
+                    text = " ".join(user_buf)
+                    print(f"\U0001f464 User: {text}")
+                    bus.transcript("user", text)
+                    user_buf.clear()
+                if model_buf:
+                    text = " ".join(model_buf)
+                    print(f"\U0001f916 Jarvis: {text}")
+                    bus.transcript("jarvis", text)
+                    model_buf.clear()
+
+                # Jarvis ko sone ko kaha tha - alvida poora sun lein, phir
+                # session band. Aage ka faisla session_once karega.
+                if sleep_pending:
+                    await wait_for_playback(spk_queue, playback)
+                    sleep_event.set()
+                    return
 
 
-async def session_once(client, config, mic_queue, spk_queue, playback, bus):
-    """Ek Gemini Live session - connect se lekar disconnect tak."""
+async def session_once(
+    client, config, mic_queue, spk_queue, playback, bus, sleep_event
+):
+    """Ek Gemini Live session - connect se lekar disconnect tak.
+
+    True lautata hai agar Jarvis ko sula diya gaya (dobara connect nahi
+    karna), warna False - connection gaya, reconnect karo.
+    """
     print("\nJarvis (Gemini Live) se connect ho raha hai...")
     bus.state("connecting")
 
@@ -201,23 +398,36 @@ async def session_once(client, config, mic_queue, spk_queue, playback, bus):
             except queue.Empty:
                 break
 
+        sleeper = asyncio.create_task(sleep_event.wait())
         tasks = [
             asyncio.create_task(send_loop(session, mic_queue, playback)),
-            asyncio.create_task(receive_loop(session, spk_queue, bus)),
+            asyncio.create_task(
+                receive_loop(session, spk_queue, playback, bus, sleep_event)
+            ),
+            sleeper,
         ]
         try:
-            done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_EXCEPTION)
+            # FIRST_COMPLETED, FIRST_EXCEPTION nahi: koi bhi loop ruke - chahe
+            # gir kar, chahe chupchaap - session aadha-zinda nahi chhodna.
+            # Pehle receive_loop chupchaap khatam ho jata tha aur session
+            # bina sune latka rehta tha.
+            done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         finally:
-            # Ek loop gira toh doosre ko bhi rokna hai - warna woh mari hui
-            # connection par likhta rahega.
+            # Ek loop ruka toh baaki bhi rokne hain - warna woh mari hui
+            # connection par likhte rahenge.
             playback.connected = False
             for task in tasks:
                 task.cancel()
             await asyncio.gather(*tasks, return_exceptions=True)
 
+        if sleep_event.is_set():
+            return True
+
         # Jo pehle gira, uska asli exception yahan dobara uthega
         for task in done:
-            task.result()
+            if task is not sleeper:
+                task.result()
+        return False
 
 
 async def run():
@@ -280,18 +490,27 @@ async def run():
         system_instruction=types.Content(parts=[types.Part(text=instruction)]),
         input_audio_transcription=types.AudioTranscriptionConfig(),
         output_audio_transcription=types.AudioTranscriptionConfig(),
+        tools=TOOLS,
     )
+
+    sleep_event = asyncio.Event()
+    slept = False
 
     delay = 1
     try:
         # Connection tutna normal hai - keepalive timeout, wifi, ya server side
-        # se. Crash karne ke bajaye dobara connect karein.
+        # se. Crash karne ke bajaye dobara connect karein. Band sirf tab, jab
+        # aap Jarvis ko sone ko kahein (ya Ctrl+C).
         while True:
             started = loop.time()
             try:
-                await session_once(
-                    client, config, mic_queue, spk_queue, playback, bus
-                )
+                if await session_once(
+                    client, config, mic_queue, spk_queue, playback, bus,
+                    sleep_event,
+                ):
+                    slept = True
+                    print("\n\U0001f4a4 Jarvis so gaya. Alvida!")
+                    break
                 print("\nSession khatam ho gaya.")
             except ConnectionClosed as exc:
                 print(f"\nConnection tut gaya: {exc.__class__.__name__}")
@@ -314,19 +533,37 @@ async def run():
     finally:
         # Cleanup: threads rokein, phir streams aur PyAudio band karein
         print("\nCleaning up audio resources...")
-        bus.state("offline")
+        bus.state("sleeping" if slept else "offline")
+        if slept:
+            # Process khatam hone se pehle HUD tak "sleeping" pahunch jaye
+            try:
+                await asyncio.sleep(0.3)
+            except asyncio.CancelledError:
+                pass
         stop_event.set()
         try:
             spk_queue.put_nowait(None)   # Speaker thread ko get() se jagayein
         except queue.Full:
             pass
+
+        # Pehle threads ruken, TAB streams band hon. Mic thread `stream.read`
+        # ke andar PortAudio me baitha hota hai - us waqt stream close kiya
+        # toh woh aazaad ki hui memory padhta hai aur poora process
+        # segfault (exit 139) se mar jata hai. read() ~20ms me lautta hai,
+        # phir stop_event dekh kar thread nikal jata hai.
+        mic_thread.join(timeout=2)
         speaker_thread.join(timeout=2)
 
-        mic_stream.stop_stream()
-        mic_stream.close()
-        spk_stream.stop_stream()
-        spk_stream.close()
-        p.terminate()
+        # Koi thread phir bhi atka ho toh uska stream mat chhedo - daemon
+        # thread hai, process ke saath khatam ho jayega. Crash se behtar.
+        if not mic_thread.is_alive():
+            mic_stream.stop_stream()
+            mic_stream.close()
+        if not speaker_thread.is_alive():
+            spk_stream.stop_stream()
+            spk_stream.close()
+        if not (mic_thread.is_alive() or speaker_thread.is_alive()):
+            p.terminate()
         print("Done!")
 
 

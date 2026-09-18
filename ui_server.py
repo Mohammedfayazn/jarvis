@@ -24,6 +24,9 @@ HTTP_HOST = "127.0.0.1"
 HTTP_PORT = 8765
 WS_PORT = 8766
 
+# Khule HUD tab ko wapas judne ka kitna waqt dena hai
+REUSE_WAIT = 2.5
+
 
 class _QuietHandler(SimpleHTTPRequestHandler):
     """Har GET ko console par likhna transcripts ko doob deta hai."""
@@ -43,6 +46,10 @@ class EventBus:
         self._clients = set()
         # Naya client turant sahi haalat dekhe, agle event ka intezaar na kare.
         self._last_state = {"type": "state", "value": "connecting"}
+
+    @property
+    def has_clients(self) -> bool:
+        return bool(self._clients)
 
     async def serve_client(self, websocket):
         self._clients.add(websocket)
@@ -73,6 +80,10 @@ class EventBus:
     # Convenience wrappers - call sites padhne me aasan rehte hain.
 
     def state(self, value: str) -> None:
+        # Wahi state dobara bhejne ka koi matlab nahi - receive_loop har
+        # transcript par "thinking" maarta hai, woh sab yahin ruk jate hain.
+        if self._last_state.get("value") == value:
+            return
         self.publish({"type": "state", "value": value})
 
     def transcript(self, role: str, text: str) -> None:
@@ -96,8 +107,21 @@ async def start(bus: EventBus, open_browser: bool = True):
     server = await websockets.serve(bus.serve_client, HTTP_HOST, WS_PORT)
 
     url = f"http://{HTTP_HOST}:{HTTP_PORT}/"
-    print(f"HUD yahan khul raha hai: {url}")
+
+    # Pehle se khula HUD tab khud wapas jud jata hai (page har 1.2s try karta
+    # hai). Usko thoda waqt dein - warna har restart par ek naya tab khulta
+    # jayega aur purane bekaar pade rahenge.
     if open_browser:
-        webbrowser.open(url)
+        for _ in range(int(REUSE_WAIT / 0.2)):
+            if bus.has_clients:
+                break
+            await asyncio.sleep(0.2)
+
+    if bus.has_clients:
+        print(f"HUD pehle se khula hai: {url}")
+    else:
+        print(f"HUD yahan khul raha hai: {url}")
+        if open_browser:
+            webbrowser.open(url)
 
     return server
