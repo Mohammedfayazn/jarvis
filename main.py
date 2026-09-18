@@ -1,10 +1,15 @@
 import asyncio
 import os
+import sys
 import pyaudio
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from prompts import instruction
+
+# Windows par stdout cp1252 hota hai, emoji crash karte hain - UTF-8 force karein
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 load_dotenv()
 
