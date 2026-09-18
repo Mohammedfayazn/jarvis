@@ -13,6 +13,8 @@ from websockets.exceptions import ConnectionClosed
 
 import browser_tools
 import ui_server
+import window_manager
+from memory import assistant as memory_assistant
 from prompts import instruction
 
 # Windows par stdout cp1252 hota hai, emoji crash karte hain - UTF-8 force karein
@@ -42,8 +44,29 @@ STABLE_SECONDS = 30   # Itni der chala toh backoff reset kar do
 LEVEL_EVERY = 3
 
 # "So jao" ke baad alvida ka itna intezaar - model turn khatam na kare toh
-# bhi Jarvis itne second me band ho jayega
+# bhi Jarvis itne second me so jayega
 SLEEP_FALLBACK = 15
+
+# Sone ke baad itne mic chunks (20ms each) anasune - Jarvis ki apni alvida
+# ki goonj se wake word na bhade. 50 = 1 second.
+WAKE_GRACE_CHUNKS = 50
+
+# Window tools ke saajhe parameters
+_WINDOW_NAME = types.Schema(
+    type=types.Type.STRING,
+    description=(
+        "App ya window ka naam jaisa user ne kaha: 'excel', 'outlook', "
+        "'visual studio', 'vs code', 'chrome', 'pdf', 'teams', ya title ka "
+        "hissa jaise 'budget report'."
+    ),
+)
+_CONFIRM_TOKEN = types.Schema(
+    type=types.Type.STRING,
+    description=(
+        "needs_confirmation wale nateeje ka token - sirf user ke saaf 'haan' "
+        "ke baad bhejo."
+    ),
+)
 
 # Jo tools Jarvis awaaz se chala sakta hai
 TOOLS = [
@@ -52,10 +75,11 @@ TOOLS = [
             types.FunctionDeclaration(
                 name="close_unused_browser_windows",
                 description=(
-                    "Har khuli browser window band karta hai, siwaye us ek ke "
-                    "jo abhi saamne hai aur Jarvis ke apne HUD ke. Tab chalao "
-                    "jab user kahe jaise 'bekaar browser band kar do', 'extra "
-                    "browser windows close karo'. Dhyan rahe: poori window "
+                    "Har khuli browser window band karta hai, siwaye kaam "
+                    "wali window aur Jarvis ke apne HUD ke. SIRF tab chalao "
+                    "jab user ki abhi wali baat me saaf WINDOWS band karne ko "
+                    "kaha ho: 'bekaar browser windows band kar do'. Tabs ki "
+                    "baat ho toh close_browser_tabs. Dhyan rahe: poori window "
                     "jati hai, uske saare tabs ke saath. Chalane ke baad user "
                     "ko batao ki kaun si windows band ki."
                 ),
@@ -65,27 +89,47 @@ TOOLS = [
                 ),
             ),
             types.FunctionDeclaration(
-                name="close_unused_browser_tabs",
+                name="close_browser_tabs",
                 description=(
-                    "Kaam wali browser window ke faltu TABS band karta hai - "
-                    "kaam wala tab aur Jarvis ki apni screen chhod kar. Tab "
-                    "chalao jab user tabs band karne ko kahe: 'faltu tabs "
-                    "band karo', 'bas yeh wala tab rakho', 'baaki tabs "
-                    "close karo'. Agar user ne bataya kaunsa rakhna hai, "
-                    "`keep` me do. Nateeje me `needs_choice` aaye toh kuch "
-                    "band nahi hua - `tabs` me se kuch naam padh kar user se "
-                    "poochho kaunsa rakhna hai, phir `keep` ke saath dobara "
-                    "chalao. User ko nateeje ka `message` batao."
+                    "Kaam wali browser window ke tabs band karta hai. SIRF tab "
+                    "chalao jab user ki abhi wali baat me saaf taur par TABS "
+                    "band karne ko kaha ho - kisi aur baat (email, gaana, "
+                    "sawaal) ke beech khud se kabhi nahi. Do tareeke, jo user "
+                    "ne kaha usi hisaab se: `close` - sirf yeh band ('Gmail "
+                    "aur WhatsApp band karo'); `keep` - yeh rakho, baaki band "
+                    "('bas GitHub rakho'). Dono ek saath nahi. 'X band karo' "
+                    "= close, 'X rakho' = keep - shak ho toh poochho. "
+                    "`needs_choice` aaye toh poochho kaunsa rakhna hai. "
+                    "`needs_confirmation` aaye toh KUCH BAND NAHI HUA: user "
+                    "ko ginti aur kuch naam batao, poochho 'band karun?', aur "
+                    "saaf 'haan' mile tabhi wahi close/keep aur "
+                    "`confirm_token` ke saath dobara chalao. User ko nateeje "
+                    "ka `message` batao."
                 ),
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={
+                        "close": types.Schema(
+                            type=types.Type.ARRAY,
+                            items=types.Schema(type=types.Type.STRING),
+                            description=(
+                                "Band karne wale tabs ke naam ke hisse, jaise "
+                                "['Gmail', 'WhatsApp']. Baaki sab khule rahenge."
+                            ),
+                        ),
                         "keep": types.Schema(
+                            type=types.Type.ARRAY,
+                            items=types.Schema(type=types.Type.STRING),
+                            description=(
+                                "Rakhne wale tabs ke naam ke hisse, jaise "
+                                "['GitHub']. Baaki sab band honge."
+                            ),
+                        ),
+                        "confirm_token": types.Schema(
                             type=types.Type.STRING,
                             description=(
-                                "Jis tab ko rakhna hai uske title ka hissa, "
-                                "jaise 'GitHub', 'YouTube', 'Gmail'. Sirf "
-                                "tab do jab user ne khud bataya ho."
+                                "needs_confirmation wale nateeje ka token - "
+                                "sirf user ke saaf 'haan' ke baad bhejo."
                             ),
                         ),
                     },
@@ -119,21 +163,266 @@ TOOLS = [
             types.FunctionDeclaration(
                 name="go_to_sleep",
                 description=(
-                    "Jarvis ko sula deta hai - baatcheet khatam aur program "
-                    "band. Sirf tab chalao jab user saaf taur par JARVIS ko "
-                    "rukne ya sone ko kahe: 'Jarvis so jao', 'bas karo "
-                    "Jarvis', 'Jarvis stop', 'good night Jarvis'. Gaane ke "
-                    "bol ya background awaaz me 'stop' aaye toh MAT chalao. "
-                    "Ek chhota sa alvida bolo."
+                    "Jarvis ko sula deta hai - baatcheet ruk jati hai aur "
+                    "Jarvis sunna band kar deta hai, jab tak user 'Hey "
+                    "Jarvis' bol kar na jagaye. Sirf tab chalao jab user saaf "
+                    "taur par JARVIS ko rukne ya sone ko kahe: 'Jarvis so "
+                    "jao', 'bas karo Jarvis', 'Jarvis stop', 'good night "
+                    "Jarvis'. Gaane ke bol ya background awaaz me 'stop' aaye "
+                    "toh MAT chalao. Ek chhota sa alvida bolo."
                 ),
                 parameters=types.Schema(
                     type=types.Type.OBJECT,
                     properties={},
                 ),
             ),
+            # --- Window manager (window_manager.py) ---
+            types.FunctionDeclaration(
+                name="list_open_windows",
+                description=(
+                    "Computer par khuli saari windows batata hai - app aur "
+                    "title. Tab chalao jab user poochhe kya khula hai, ya "
+                    "kisi window ka sahi naam jaanna ho."
+                ),
+                parameters=types.Schema(type=types.Type.OBJECT, properties={}),
+            ),
+            types.FunctionDeclaration(
+                name="close_window",
+                description=(
+                    "Naam se ek app ki window band karta hai: 'Excel band "
+                    "karo', 'close Outlook', 'close visual studio', 'PDF band "
+                    "karo'. 'current browser tab' do toh sirf saamne wala "
+                    "browser tab band hota hai. SIRF tab chalao jab user ki "
+                    "abhi wali baat me saaf band karne ko kaha ho. "
+                    "`needs_confirmation` aaye toh KUCH BAND NAHI HUA - "
+                    "`message` wala sawaal user se poochho, aur saaf 'haan' "
+                    "mile tabhi wahi name aur `confirm_token` ke saath "
+                    "dobara chalao."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "name": _WINDOW_NAME,
+                        "confirm_token": _CONFIRM_TOKEN,
+                    },
+                    required=["name"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="close_all_windows",
+                description=(
+                    "Ek app ki SAARI windows band: 'saare Chrome band karo', "
+                    "'close all Excel windows', 'close all browser windows'. "
+                    "Sirf jab user ne 'saari/all' kaha ho. needs_confirmation "
+                    "ka niyam close_window jaisa."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "app": types.Schema(
+                            type=types.Type.STRING,
+                            description="App ka naam: 'chrome', 'excel', 'outlook', 'browser'.",
+                        ),
+                        "confirm_token": _CONFIRM_TOKEN,
+                    },
+                    required=["app"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="close_all_windows_except_current",
+                description=(
+                    "Current window chhod kar computer ki SAARI windows band. "
+                    "Sirf jab user saaf yahi kahe: 'current ke alawa sab band "
+                    "karo'. Yeh HAMESHA pehle needs_confirmation deta hai - "
+                    "message padh kar sunao (usme likha hai kaunsi window "
+                    "bachegi), aur saaf 'haan' ke baad hi confirm_token ke "
+                    "saath dobara chalao."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={"confirm_token": _CONFIRM_TOKEN},
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="focus_window",
+                description=(
+                    "App ki window aage laata hai: 'Outlook pe jao', 'switch "
+                    "to VS Code', 'Chrome saamne lao'. Kuch band nahi karta."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={"name": _WINDOW_NAME},
+                    required=["name"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="minimize_window",
+                description="App ki window(s) minimize: 'Teams minimize karo'.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={"name": _WINDOW_NAME},
+                    required=["name"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="maximize_window",
+                description="App ki window maximize karke aage: 'browser maximize karo'.",
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={"name": _WINDOW_NAME},
+                    required=["name"],
+                ),
+            ),
+            # --- Personal memory (memory/) ---
+            types.FunctionDeclaration(
+                name="remember_this",
+                description=(
+                    "Ek chhoti si baat hamesha ke liye yaad rakh leta hai - "
+                    "sleep aur restart ke baad bhi rehti hai, hamari abhi ki "
+                    "baatcheet ki tarah nahi bhoolti. Jab tak main khud 'yaad "
+                    "rakho' ya 'remember' na kahoon, kabhi khud se mat "
+                    "chalana. Jaise: 'yaad rakho meri beti ka school 8:30 "
+                    "baje shuru hota hai', 'remember my wifi password is "
+                    "XYZ', 'yaad rakho main Amsterdam me rehta hoon'. Agar "
+                    "isi naam se pehle se kuch yaad hai, yeh use update kar "
+                    "deta hai - dobara poochhne ki zaroorat nahi. Agar "
+                    "baatcheet me tumhe khud koi yaad rakhne layak naya fact "
+                    "dikhe (jaise 'mera favorite editor VS Code hai') jo "
+                    "maine seedha yaad rakhne ko nahi kaha, pehle poochho "
+                    "'yeh yaad rakh loon?' - saaf 'haan' milne ke baad hi "
+                    "yeh tool chalao."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "category": types.Schema(
+                            type=types.Type.STRING,
+                            description=(
+                                "Personal, Family, Work, Preferences, "
+                                "Projects, ya Reminders me se sabse sahi. "
+                                "Pata na ho toh Personal."
+                            ),
+                        ),
+                        "key": types.Schema(
+                            type=types.Type.STRING,
+                            description=(
+                                "Chhota sa naam jisse baad me yeh baat "
+                                "dhoondhi jaye, jaise 'beti ka school', "
+                                "'office wifi password', 'favorite editor'."
+                            ),
+                        ),
+                        "value": types.Schema(
+                            type=types.Type.STRING,
+                            description=(
+                                "Asli baat jo yaad rakhni hai, jaise '8:30' "
+                                "ya 'VS Code'."
+                            ),
+                        ),
+                    },
+                    required=["key", "value"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="recall_memory",
+                description=(
+                    "Pehle yaad rakhi hui baaton me se jawab dhoondhta hai. "
+                    "Tab chalao jab main kuch aisa poochhoon jiska jawab "
+                    "tumhe yaad rakhi hui kisi baat me mil sakta ho, jaise "
+                    "'meri beti ka school kab shuru hota hai?' ya 'mera "
+                    "wifi password kya hai?'. `found: false` aaye toh saaf "
+                    "kaho 'mujhe yaad nahi', guess mat karo."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "query": types.Schema(
+                            type=types.Type.STRING,
+                            description=(
+                                "Jo poochha gaya uska matlab, jaise 'beti ka "
+                                "school time'."
+                            ),
+                        ),
+                    },
+                    required=["query"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="forget_memory",
+                description=(
+                    "Ek yaad rakhi hui baat hamesha ke liye hata deta hai. "
+                    "Sirf tab chalao jab main saaf kahoon 'yeh baat bhool "
+                    "jao' ya 'ise yaad se hata do', naam ke saath."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "key": types.Schema(
+                            type=types.Type.STRING,
+                            description=(
+                                "Jo naam use hua tha yaad rakhte waqt, jaise "
+                                "'office wifi password'."
+                            ),
+                        ),
+                    },
+                    required=["key"],
+                ),
+            ),
+            types.FunctionDeclaration(
+                name="list_memories",
+                description=(
+                    "Ab tak yaad rakhi saari (ya ek category ki) baatein "
+                    "batata hai. Tab chalao jab main poochhoon 'tumhe mere "
+                    "baare me kya kya yaad hai?' ya 'family wali baatein "
+                    "batao'."
+                ),
+                parameters=types.Schema(
+                    type=types.Type.OBJECT,
+                    properties={
+                        "category": types.Schema(
+                            type=types.Type.STRING,
+                            description=(
+                                "Optional: Personal, Family, Work, "
+                                "Preferences, Projects, ya Reminders me se "
+                                "sirf ek. Khali chhodo toh sab dikhaye."
+                            ),
+                        ),
+                    },
+                ),
+            ),
         ]
     )
 ]
+
+
+def _list_windows_tool(_args):
+    windows = window_manager.list_open_windows()
+    return {"windows": windows,
+            "message": window_manager.summarize_windows(windows)}
+
+
+# Window tools ka ek hi rasta - sab blocking hain (Win32, COM), sab thread me
+WINDOW_TOOLS = {
+    "list_open_windows": _list_windows_tool,
+    "close_window": lambda a: window_manager.close_window(
+        a.get("name", ""), a.get("confirm_token")),
+    "close_all_windows": lambda a: window_manager.close_all_windows(
+        a.get("app", ""), a.get("confirm_token")),
+    "close_all_windows_except_current":
+        lambda a: window_manager.close_all_windows_except_current(
+            a.get("confirm_token")),
+    "focus_window": lambda a: window_manager.focus_window(a.get("name", "")),
+    "minimize_window": lambda a: window_manager.minimize_window(a.get("name", "")),
+    "maximize_window": lambda a: window_manager.maximize_window(a.get("name", "")),
+}
+
+# Personal memory tools - SQLite-backed, survives sleep/restart (memory/)
+MEMORY_TOOLS = {
+    "remember_this": lambda a: memory_assistant.remember_this(
+        a.get("category", ""), a.get("key", ""), a.get("value", "")),
+    "recall_memory": lambda a: memory_assistant.recall_memory(a.get("query", "")),
+    "forget_memory": lambda a: memory_assistant.forget_memory(a.get("key", "")),
+    "list_memories": lambda a: memory_assistant.list_memories(a.get("category") or None),
+}
 
 
 class Playback:
@@ -255,11 +544,14 @@ async def handle_tool_call(session, tool_call, bus, sleep_event):
             note = result.get("message") or result.get("error", "")
             print(f"\U0001f9f9 {note}")
             bus.transcript("system", note)
-        elif call.name == "close_unused_browser_tabs":
-            keep = (call.args or {}).get("keep")
+        elif call.name == "close_browser_tabs":
+            args = call.args or {}
             # PowerShell + UI Automation - kuch second lagte hain, loop se bahar
             result = await asyncio.to_thread(
-                browser_tools.close_unused_browser_tabs, keep
+                browser_tools.close_browser_tabs,
+                args.get("keep"),
+                args.get("close"),
+                args.get("confirm_token"),
             )
             note = result.get("message") or result.get("error", "")
             print(f"\U0001f5c2️ {note}")
@@ -271,6 +563,18 @@ async def handle_tool_call(session, tool_call, bus, sleep_event):
             note = result.get("message", "YouTube nahi khul paya")
             print(f"\U0001f3b5 {note}")
             bus.transcript("system", note)
+        elif call.name in WINDOW_TOOLS:
+            result = await asyncio.to_thread(WINDOW_TOOLS[call.name], call.args or {})
+            note = result.get("message", "")
+            print(f"\U0001fa9f {note}")
+            # Model ko poora nateeja jata hai; HUD par ek line kaafi
+            bus.transcript("system", note if len(note) <= 160 else note[:157] + "...")
+        elif call.name in MEMORY_TOOLS:
+            # SQLite hai - blocking, isliye loop se bahar
+            result = await asyncio.to_thread(MEMORY_TOOLS[call.name], call.args or {})
+            note = result.get("message", "")
+            print(f"\U0001f9e0 {note}")
+            bus.transcript("system", note if len(note) <= 160 else note[:157] + "...")
         else:
             result = {"error": f"'{call.name}' naam ka koi tool nahi hai."}
 
@@ -372,6 +676,46 @@ async def receive_loop(session, spk_queue, playback, bus, sleep_event):
                     return
 
 
+def load_wake_word():
+    """"Hey Jarvis" sunne wala model - na mile toh Jarvis bina iske chale.
+
+    Pehli baar model download hota hai; tab internet na ho, ya openwakeword
+    install hi na ho, toh sone ka matlab purana wala rahega: program band.
+    """
+    try:
+        from wake_word import WakeWordListener
+        return WakeWordListener()
+    except Exception as exc:   # ImportError, network, model file - sab
+        print(
+            f"⚠️  'Hey Jarvis' wake word load nahi hua ({exc.__class__.__name__}: "
+            f"{exc}). Sone par Jarvis band ho jayega."
+        )
+        return None
+
+
+async def wait_for_wake_word(mic_queue, wake):
+    """Jarvis so raha hai - sirf "Hey Jarvis" ka intezaar.
+
+    Gemini se connection is dauraan band hai; mic ka audio sirf local model
+    tak jata hai. Model har 80ms par ~2ms leta hai, isliye thread ki zaroorat
+    nahi - seedha loop par.
+    """
+    wake.reset()
+    # Neend se pehle ka mic audio - Jarvis ka apna alvida bhi - phenk dein,
+    # warna usi me "Jarvis" sun kar turant jaag jata. Alvida me aksar "Hey
+    # Jarvis bol ke jagana" hota hai, aur speaker ki awaaz mic tak thodi der
+    # se pahunchti hai - isliye shuru ka ek second bhi anasuna.
+    while not mic_queue.empty():
+        mic_queue.get_nowait()
+    for _ in range(WAKE_GRACE_CHUNKS):
+        await mic_queue.get()
+
+    while True:
+        data = await mic_queue.get()
+        if wake.heard(data):
+            return
+
+
 async def session_once(
     client, config, mic_queue, spk_queue, playback, bus, sleep_event
 ):
@@ -439,6 +783,13 @@ async def run():
     # PyAudio ko initialize karein aur streams open karein. Streams reconnect
     # ke aar-paar zinda rehte hain - device baar-baar kholna bekaar risk hai.
     p = pyaudio.PyAudio()
+    # Windows ka default mic chupke se badal jata hai (headset lagaya, hataya)
+    # - aur muted headset par Jarvis ko sirf khamoshi milti hai. Kaunsa mic
+    # hai, shuru me hi dikh jaye.
+    try:
+        print(f"\U0001f3a4 Mic: {p.get_default_input_device_info()['name']}")
+    except OSError:
+        print("⚠️  Koi mic nahi mila!")
     mic_stream = p.open(
         format=pyaudio.paInt16,
         channels=1,
@@ -493,24 +844,34 @@ async def run():
         tools=TOOLS,
     )
 
-    sleep_event = asyncio.Event()
-    slept = False
+    wake = load_wake_word()
 
     delay = 1
     try:
         # Connection tutna normal hai - keepalive timeout, wifi, ya server side
-        # se. Crash karne ke bajaye dobara connect karein. Band sirf tab, jab
-        # aap Jarvis ko sone ko kahein (ya Ctrl+C).
+        # se. Crash karne ke bajaye dobara connect karein. Jarvis so jaye toh
+        # "Hey Jarvis" ka intezaar, phir naya session. Band sirf Ctrl+C se.
         while True:
+            # Har session ka apna event. go_to_sleep ka 15s wala fallback
+            # timer purane event ko pakde rehta hai - agar woh naye session
+            # me bajta, toh jagte hi Jarvis phir so jata.
+            sleep_event = asyncio.Event()
             started = loop.time()
             try:
                 if await session_once(
                     client, config, mic_queue, spk_queue, playback, bus,
                     sleep_event,
                 ):
-                    slept = True
-                    print("\n\U0001f4a4 Jarvis so gaya. Alvida!")
-                    break
+                    if wake is None:
+                        print("\n\U0001f4a4 Jarvis so gaya. Alvida!")
+                        break
+
+                    print("\n\U0001f4a4 Jarvis so gaya. Jagane ke liye bolo: 'Hey Jarvis'")
+                    bus.state("sleeping")
+                    await wait_for_wake_word(mic_queue, wake)
+                    print("\n\U0001f44b 'Hey Jarvis' suna - jaag raha hoon!")
+                    delay = 1
+                    continue
                 print("\nSession khatam ho gaya.")
             except ConnectionClosed as exc:
                 print(f"\nConnection tut gaya: {exc.__class__.__name__}")
@@ -533,13 +894,7 @@ async def run():
     finally:
         # Cleanup: threads rokein, phir streams aur PyAudio band karein
         print("\nCleaning up audio resources...")
-        bus.state("sleeping" if slept else "offline")
-        if slept:
-            # Process khatam hone se pehle HUD tak "sleeping" pahunch jaye
-            try:
-                await asyncio.sleep(0.3)
-            except asyncio.CancelledError:
-                pass
+        bus.state("offline")
         stop_event.set()
         try:
             spk_queue.put_nowait(None)   # Speaker thread ko get() se jagayein

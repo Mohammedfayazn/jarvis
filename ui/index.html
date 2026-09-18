@@ -171,6 +171,8 @@
   }
 
   body[data-state="listening"] #meter { opacity: 1; }
+  /* Sote waqt bhi sun raha hai (sirf wake word) - meter halka zinda */
+  body[data-state="sleeping"] #meter { opacity: 0.55; }
 
   #meter i {
     display: block;
@@ -301,7 +303,7 @@
     },
     sleeping: {
       label: "Sleeping",
-      sub:   "Jarvis so gaya - jagane ke liye terminal se chalu karein",
+      sub:   "Jagane ke liye bolein: “Hey Jarvis”",
       accent: "#5c6bc0", soft: "rgba(92,107,192,0.20)",
     },
     offline: {
@@ -366,12 +368,9 @@
       else if (msg.type === "transcript") addLine(msg.role, msg.text);
     };
 
-    ws.onclose = () => {
-      // So gaya toh connection band hona hi tha - "offline" se woh
-      // jaan-boojh kar sulaya gaya dikhna nahi chahiye.
-      if (body.dataset.state !== "sleeping") setState("offline");
-      setTimeout(connect, 1200);
-    };
+    // Sote waqt bhi Jarvis chal raha hota hai (wake word sunta hai), toh
+    // connection tootne ka matlab hamesha yahi hai ki program band hua.
+    ws.onclose = () => { setState("offline"); setTimeout(connect, 1200); };
     ws.onerror = () => ws.close();
   }
 

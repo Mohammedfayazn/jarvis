@@ -1,7 +1,18 @@
 # in dono me se koi ek command sirf ek baar run kardo sab install ho jayga
-#pip install google-genai pyaudio python-dotenv
+#pip install google-genai pyaudio python-dotenv openwakeword pygetwindow pyautogui psutil pywin32
 #pip install -r requirements.txt
 
 google-genai
 PyAudio
 python-dotenv
+# "Hey Jarvis" wake word - offline. Pehli baar chalne par ~4 MB model
+# download karta hai.
+openwakeword
+# Window manager (window_manager.py) - Windows par apps control karna
+pygetwindow
+pyautogui
+psutil
+pywin32
+# Personal memory (memory/) - semantic search ke liye optional, bhaari hai
+# (~500 MB, torch samet). Ye na ho toh bhi fuzzy/keyword search chalta hai.
+sentence-transformers

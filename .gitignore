@@ -2,3 +2,9 @@ __pycache__/
 *.pyc
 .env
 venv/
+
+# Jarvis's personal memory - contains whatever you asked it to remember
+memory/data/
+*.db
+*.db-wal
+*.db-shm
