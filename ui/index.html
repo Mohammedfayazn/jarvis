@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>J.A.R.V.I.S.</title>
+<style>
+  :root {
+    --cyan: #00d8ff;
+    --cyan-bright: #00f2fe;
+    --warn: #ff6600;
+    --alert: #ff3366;
+    --ink: #cfefff;
+    --muted: #4d7a90;
+
+    /* Mic level, 0..1 — mic thread se aata hai */
+    --level: 0;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: #000308;
+    color: var(--ink);
+    font-family: "Consolas", "SF Mono", ui-monospace, monospace;
+    overflow: hidden;
+  }
+
+  /* Orb ---------------------------------------------------------------- */
+
+  #stage {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+  }
+
+  #orb {
+    width: min(92vh, 92vw);
+    height: min(92vh, 92vw);
+    /* Bolne/sunne par halka sa bada hota hai - level mic se live aata hai */
+    transform: scale(calc(1 + var(--level) * 0.05));
+    transition: transform 90ms linear, filter 300ms ease, opacity 400ms ease;
+    filter: saturate(1) brightness(1);
+  }
+
+  #orb svg { display: block; width: 100%; height: 100%; }
+
+  /* Haalat ke hisaab se orb ka mizaaj ------------------------------------ */
+
+  body[data-state="connecting"] #orb { opacity: 0.45; filter: saturate(0.3) brightness(0.7); }
+
+  body[data-state="listening"] #orb {
+    filter: saturate(1.05) brightness(calc(1 + var(--level) * 0.45));
+    animation: breathe 5s ease-in-out infinite;
+  }
+
+  body[data-state="speaking"] #orb {
+    filter: saturate(1.35) brightness(1.3);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  body[data-state="reconnecting"] #orb {
+    filter: saturate(0.5) brightness(0.75) hue-rotate(-40deg);
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+
+  body[data-state="offline"] #orb { opacity: 0.25; filter: grayscale(1) brightness(0.5); }
+
+  @keyframes breathe {
+    0%, 100% { opacity: 0.86; }
+    50%      { opacity: 1; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.9; }
+    50%      { opacity: 1; }
+  }
+
+  /* Status chip --------------------------------------------------------- */
+
+  #status {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 18px;
+    border: 1px solid rgba(0, 216, 255, 0.35);
+    border-radius: 999px;
+    background: rgba(2, 8, 19, 0.75);
+    backdrop-filter: blur(6px);
+    font-size: 12px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--cyan-bright);
+    white-space: nowrap;
+  }
+
+  #dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan);
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  body[data-state="speaking"] #dot { background: var(--cyan-bright); animation-duration: 0.7s; }
+  body[data-state="reconnecting"] #dot,
+  body[data-state="offline"] #dot { background: var(--alert); box-shadow: 0 0 10px var(--alert); }
+
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  /* Mic level meter ----------------------------------------------------- */
+
+  #meter {
+    position: fixed;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(360px, 60vw);
+    height: 3px;
+    background: rgba(0, 216, 255, 0.14);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  #meter i {
+    display: block;
+    height: 100%;
+    width: calc(var(--level) * 100%);
+    background: linear-gradient(90deg, var(--cyan), var(--cyan-bright));
+    box-shadow: 0 0 12px var(--cyan);
+    transition: width 90ms linear;
+  }
+
+  /* Transcript rail ----------------------------------------------------- */
+
+  #log {
+    position: fixed;
+    right: 28px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: min(330px, 30vw);
+    max-height: 68vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 12px;
+    pointer-events: none;
+  }
+
+  .line {
+    font-size: 12.5px;
+    line-height: 1.55;
+    letter-spacing: 0.4px;
+    padding-left: 12px;
+    border-left: 2px solid var(--muted);
+    color: var(--muted);
+    animation: slide 280ms ease-out;
+  }
+
+  .line .who {
+    display: block;
+    font-size: 9.5px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    margin-bottom: 3px;
+    opacity: 0.75;
+  }
+
+  .line.jarvis { border-left-color: var(--cyan); color: var(--ink); }
+  .line.jarvis .who { color: var(--cyan-bright); }
+  .line.user { border-left-color: var(--warn); color: #d7c4b0; }
+  .line.user .who { color: var(--warn); }
+
+  @keyframes slide {
+    from { opacity: 0; transform: translateX(14px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  #hint {
+    position: fixed;
+    bottom: 46px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10.5px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 760px) {
+    #log { display: none; }
+  }
+</style>
+</head>
+<body data-state="connecting">
+
+  <div id="stage"><div id="orb"></div></div>
+
+  <div id="status"><span id="dot"></span><span id="label">Connecting</span></div>
+
+  <div id="log"></div>
+
+  <div id="hint">Bolna shuru karein &middot; band karne ke liye terminal me Ctrl+C</div>
+  <div id="meter"><i></i></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const body  = document.body;
+  const orb   = document.getElementById("orb");
+  const label = document.getElementById("label");
+  const log   = document.getElementById("log");
+
+  const LABELS = {
+    connecting:   "Connecting",
+    listening:    "Listening",
+    speaking:     "Jarvis speaking",
+    reconnecting: "Reconnecting",
+    offline:      "Offline",
+  };
+
+  // SVG inline daalte hain (<img> ke andar CSS filters lag nahi paate)
+  fetch("jarvis.svg")
+    .then((r) => r.text())
+    .then((svg) => { orb.innerHTML = svg; })
+    .catch(() => { orb.textContent = "?"; });
+
+  let decay = 0;
+
+  function setState(value) {
+    body.dataset.state = value;
+    label.textContent = LABELS[value] || value;
+  }
+
+  function setLevel(value) {
+    decay = Math.max(0, Math.min(1, value));
+    document.documentElement.style.setProperty("--level", decay.toFixed(3));
+  }
+
+  // Server chup ho jaye toh meter wahin atka na reh jaye
+  setInterval(() => {
+    if (decay > 0.001) setLevel(decay * 0.8);
+  }, 120);
+
+  function addLine(role, text) {
+    const el = document.createElement("div");
+    el.className = "line " + role;
+    const who = document.createElement("span");
+    who.className = "who";
+    who.textContent = role === "user" ? "You" : "Jarvis";
+    el.append(who, document.createTextNode(text));
+    log.append(el);
+    while (log.children.length > 8) log.firstChild.remove();
+  }
+
+  // Backend se connection. Jarvis restart ho toh page khud wapas jud jaye.
+  function connect() {
+    const ws = new WebSocket("ws://" + location.hostname + ":8766");
+
+    ws.onmessage = (event) => {
+      let msg;
+      try { msg = JSON.parse(event.data); } catch { return; }
+
+      if (msg.type === "state")      setState(msg.value);
+      else if (msg.type === "level") setLevel(msg.value);
+      else if (msg.type === "transcript") addLine(msg.role, msg.text);
+    };
+
+    ws.onclose = () => {
+      setState("offline");
+      setTimeout(connect, 1200);
+    };
+
+    ws.onerror = () => ws.close();
+  }
+
+  connect();
+})();
+</script>
+</body>
+</html>
