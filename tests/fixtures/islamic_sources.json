@@ -1,0 +1,1481 @@
+{
+ "source": "Captured from api.alquran.cloud (Tanzil Uthmani, Sahih International, transliteration) and fawazahmed0/hadith-api via islamic/sources.py - regenerate, never hand-edit.",
+ "quran_surahs": [
+  {
+   "number": 1,
+   "name_ar": "سُورَةُ ٱلْفَاتِحَةِ",
+   "name_en": "Al-Faatiha",
+   "meaning": "The Opening",
+   "ayah_count": 7,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 2,
+   "name_ar": "سُورَةُ البَقَرَةِ",
+   "name_en": "Al-Baqara",
+   "meaning": "The Cow",
+   "ayah_count": 286,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 3,
+   "name_ar": "سُورَةُ آلِ عِمۡرَانَ",
+   "name_en": "Aal-i-Imraan",
+   "meaning": "The Family of Imraan",
+   "ayah_count": 200,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 4,
+   "name_ar": "سُورَةُ النِّسَاءِ",
+   "name_en": "An-Nisaa",
+   "meaning": "The Women",
+   "ayah_count": 176,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 5,
+   "name_ar": "سُورَةُ المَائـِدَةِ",
+   "name_en": "Al-Maaida",
+   "meaning": "The Table",
+   "ayah_count": 120,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 6,
+   "name_ar": "سُورَةُ الأَنۡعَامِ",
+   "name_en": "Al-An'aam",
+   "meaning": "The Cattle",
+   "ayah_count": 165,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 7,
+   "name_ar": "سُورَةُ الأَعۡرَافِ",
+   "name_en": "Al-A'raaf",
+   "meaning": "The Heights",
+   "ayah_count": 206,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 8,
+   "name_ar": "سُورَةُ الأَنفَالِ",
+   "name_en": "Al-Anfaal",
+   "meaning": "The Spoils of War",
+   "ayah_count": 75,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 9,
+   "name_ar": "سُورَةُ التَّوۡبَةِ",
+   "name_en": "At-Tawba",
+   "meaning": "The Repentance",
+   "ayah_count": 129,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 10,
+   "name_ar": "سُورَةُ يُونُسَ",
+   "name_en": "Yunus",
+   "meaning": "Jonas",
+   "ayah_count": 109,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 11,
+   "name_ar": "سُورَةُ هُودٍ",
+   "name_en": "Hud",
+   "meaning": "Hud",
+   "ayah_count": 123,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 12,
+   "name_ar": "سُورَةُ يُوسُفَ",
+   "name_en": "Yusuf",
+   "meaning": "Joseph",
+   "ayah_count": 111,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 13,
+   "name_ar": "سُورَةُ الرَّعۡدِ",
+   "name_en": "Ar-Ra'd",
+   "meaning": "The Thunder",
+   "ayah_count": 43,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 14,
+   "name_ar": "سُورَةُ إِبۡرَاهِيمَ",
+   "name_en": "Ibrahim",
+   "meaning": "Abraham",
+   "ayah_count": 52,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 15,
+   "name_ar": "سُورَةُ الحِجۡرِ",
+   "name_en": "Al-Hijr",
+   "meaning": "The Rock",
+   "ayah_count": 99,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 16,
+   "name_ar": "سُورَةُ النَّحۡلِ",
+   "name_en": "An-Nahl",
+   "meaning": "The Bee",
+   "ayah_count": 128,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 17,
+   "name_ar": "سُورَةُ الإِسۡرَاءِ",
+   "name_en": "Al-Israa",
+   "meaning": "The Night Journey",
+   "ayah_count": 111,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 18,
+   "name_ar": "سُورَةُ الكَهۡفِ",
+   "name_en": "Al-Kahf",
+   "meaning": "The Cave",
+   "ayah_count": 110,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 19,
+   "name_ar": "سُورَةُ مَرۡيَمَ",
+   "name_en": "Maryam",
+   "meaning": "Mary",
+   "ayah_count": 98,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 20,
+   "name_ar": "سُورَةُ طه",
+   "name_en": "Taa-Haa",
+   "meaning": "Taa-Haa",
+   "ayah_count": 135,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 21,
+   "name_ar": "سُورَةُ الأَنبِيَاءِ",
+   "name_en": "Al-Anbiyaa",
+   "meaning": "The Prophets",
+   "ayah_count": 112,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 22,
+   "name_ar": "سُورَةُ الحَجِّ",
+   "name_en": "Al-Hajj",
+   "meaning": "The Pilgrimage",
+   "ayah_count": 78,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 23,
+   "name_ar": "سُورَةُ المُؤۡمِنُونَ",
+   "name_en": "Al-Muminoon",
+   "meaning": "The Believers",
+   "ayah_count": 118,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 24,
+   "name_ar": "سُورَةُ النُّورِ",
+   "name_en": "An-Noor",
+   "meaning": "The Light",
+   "ayah_count": 64,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 25,
+   "name_ar": "سُورَةُ الفُرۡقَانِ",
+   "name_en": "Al-Furqaan",
+   "meaning": "The Criterion",
+   "ayah_count": 77,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 26,
+   "name_ar": "سُورَةُ الشُّعَرَاءِ",
+   "name_en": "Ash-Shu'araa",
+   "meaning": "The Poets",
+   "ayah_count": 227,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 27,
+   "name_ar": "سُورَةُ النَّمۡلِ",
+   "name_en": "An-Naml",
+   "meaning": "The Ant",
+   "ayah_count": 93,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 28,
+   "name_ar": "سُورَةُ القَصَصِ",
+   "name_en": "Al-Qasas",
+   "meaning": "The Stories",
+   "ayah_count": 88,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 29,
+   "name_ar": "سُورَةُ العَنكَبُوتِ",
+   "name_en": "Al-Ankaboot",
+   "meaning": "The Spider",
+   "ayah_count": 69,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 30,
+   "name_ar": "سُورَةُ الرُّومِ",
+   "name_en": "Ar-Room",
+   "meaning": "The Romans",
+   "ayah_count": 60,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 31,
+   "name_ar": "سُورَةُ لُقۡمَانَ",
+   "name_en": "Luqman",
+   "meaning": "Luqman",
+   "ayah_count": 34,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 32,
+   "name_ar": "سُورَةُ السَّجۡدَةِ",
+   "name_en": "As-Sajda",
+   "meaning": "The Prostration",
+   "ayah_count": 30,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 33,
+   "name_ar": "سُورَةُ الأَحۡزَابِ",
+   "name_en": "Al-Ahzaab",
+   "meaning": "The Clans",
+   "ayah_count": 73,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 34,
+   "name_ar": "سُورَةُ سَبَإٍ",
+   "name_en": "Saba",
+   "meaning": "Sheba",
+   "ayah_count": 54,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 35,
+   "name_ar": "سُورَةُ فَاطِرٍ",
+   "name_en": "Faatir",
+   "meaning": "The Originator",
+   "ayah_count": 45,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 36,
+   "name_ar": "سُورَةُ يسٓ",
+   "name_en": "Yaseen",
+   "meaning": "Yaseen",
+   "ayah_count": 83,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 37,
+   "name_ar": "سُورَةُ الصَّافَّاتِ",
+   "name_en": "As-Saaffaat",
+   "meaning": "Those drawn up in Ranks",
+   "ayah_count": 182,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 38,
+   "name_ar": "سُورَةُ صٓ",
+   "name_en": "Saad",
+   "meaning": "The letter Saad",
+   "ayah_count": 88,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 39,
+   "name_ar": "سُورَةُ الزُّمَرِ",
+   "name_en": "Az-Zumar",
+   "meaning": "The Groups",
+   "ayah_count": 75,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 40,
+   "name_ar": "سُورَةُ غَافِرٍ",
+   "name_en": "Ghafir",
+   "meaning": "The Forgiver",
+   "ayah_count": 85,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 41,
+   "name_ar": "سُورَةُ فُصِّلَتۡ",
+   "name_en": "Fussilat",
+   "meaning": "Explained in detail",
+   "ayah_count": 54,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 42,
+   "name_ar": "سُورَةُ الشُّورَىٰ",
+   "name_en": "Ash-Shura",
+   "meaning": "Consultation",
+   "ayah_count": 53,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 43,
+   "name_ar": "سُورَةُ الزُّخۡرُفِ",
+   "name_en": "Az-Zukhruf",
+   "meaning": "Ornaments of gold",
+   "ayah_count": 89,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 44,
+   "name_ar": "سُورَةُ الدُّخَانِ",
+   "name_en": "Ad-Dukhaan",
+   "meaning": "The Smoke",
+   "ayah_count": 59,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 45,
+   "name_ar": "سُورَةُ الجَاثِيَةِ",
+   "name_en": "Al-Jaathiya",
+   "meaning": "Crouching",
+   "ayah_count": 37,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 46,
+   "name_ar": "سُورَةُ الأَحۡقَافِ",
+   "name_en": "Al-Ahqaf",
+   "meaning": "The Dunes",
+   "ayah_count": 35,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 47,
+   "name_ar": "سُورَةُ مُحَمَّدٍ",
+   "name_en": "Muhammad",
+   "meaning": "Muhammad",
+   "ayah_count": 38,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 48,
+   "name_ar": "سُورَةُ الفَتۡحِ",
+   "name_en": "Al-Fath",
+   "meaning": "The Victory",
+   "ayah_count": 29,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 49,
+   "name_ar": "سُورَةُ الحُجُرَاتِ",
+   "name_en": "Al-Hujuraat",
+   "meaning": "The Inner Apartments",
+   "ayah_count": 18,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 50,
+   "name_ar": "سُورَةُ قٓ",
+   "name_en": "Qaaf",
+   "meaning": "The letter Qaaf",
+   "ayah_count": 45,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 51,
+   "name_ar": "سُورَةُ الذَّارِيَاتِ",
+   "name_en": "Adh-Dhaariyat",
+   "meaning": "The Winnowing Winds",
+   "ayah_count": 60,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 52,
+   "name_ar": "سُورَةُ الطُّورِ",
+   "name_en": "At-Tur",
+   "meaning": "The Mount",
+   "ayah_count": 49,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 53,
+   "name_ar": "سُورَةُ النَّجۡمِ",
+   "name_en": "An-Najm",
+   "meaning": "The Star",
+   "ayah_count": 62,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 54,
+   "name_ar": "سُورَةُ القَمَرِ",
+   "name_en": "Al-Qamar",
+   "meaning": "The Moon",
+   "ayah_count": 55,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 55,
+   "name_ar": "سُورَةُ الرَّحۡمَٰن",
+   "name_en": "Ar-Rahmaan",
+   "meaning": "The Beneficent",
+   "ayah_count": 78,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 56,
+   "name_ar": "سُورَةُ الوَاقِعَةِ",
+   "name_en": "Al-Waaqia",
+   "meaning": "The Inevitable",
+   "ayah_count": 96,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 57,
+   "name_ar": "سُورَةُ الحَدِيدِ",
+   "name_en": "Al-Hadid",
+   "meaning": "The Iron",
+   "ayah_count": 29,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 58,
+   "name_ar": "سُورَةُ المُجَادلَةِ",
+   "name_en": "Al-Mujaadila",
+   "meaning": "The Pleading Woman",
+   "ayah_count": 22,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 59,
+   "name_ar": "سُورَةُ الحَشۡرِ",
+   "name_en": "Al-Hashr",
+   "meaning": "The Exile",
+   "ayah_count": 24,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 60,
+   "name_ar": "سُورَةُ المُمۡتَحنَةِ",
+   "name_en": "Al-Mumtahana",
+   "meaning": "She that is to be examined",
+   "ayah_count": 13,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 61,
+   "name_ar": "سُورَةُ الصَّفِّ",
+   "name_en": "As-Saff",
+   "meaning": "The Ranks",
+   "ayah_count": 14,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 62,
+   "name_ar": "سُورَةُ الجُمُعَةِ",
+   "name_en": "Al-Jumu'a",
+   "meaning": "Friday",
+   "ayah_count": 11,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 63,
+   "name_ar": "سُورَةُ المُنَافِقُونَ",
+   "name_en": "Al-Munaafiqoon",
+   "meaning": "The Hypocrites",
+   "ayah_count": 11,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 64,
+   "name_ar": "سُورَةُ التَّغَابُنِ",
+   "name_en": "At-Taghaabun",
+   "meaning": "Mutual Disillusion",
+   "ayah_count": 18,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 65,
+   "name_ar": "سُورَةُ الطَّلَاقِ",
+   "name_en": "At-Talaaq",
+   "meaning": "Divorce",
+   "ayah_count": 12,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 66,
+   "name_ar": "سُورَةُ التَّحۡرِيمِ",
+   "name_en": "At-Tahrim",
+   "meaning": "The Prohibition",
+   "ayah_count": 12,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 67,
+   "name_ar": "سُورَةُ المُلۡكِ",
+   "name_en": "Al-Mulk",
+   "meaning": "The Sovereignty",
+   "ayah_count": 30,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 68,
+   "name_ar": "سُورَةُ القَلَمِ",
+   "name_en": "Al-Qalam",
+   "meaning": "The Pen",
+   "ayah_count": 52,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 69,
+   "name_ar": "سُورَةُ الحَاقَّةِ",
+   "name_en": "Al-Haaqqa",
+   "meaning": "The Reality",
+   "ayah_count": 52,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 70,
+   "name_ar": "سُورَةُ المَعَارِجِ",
+   "name_en": "Al-Ma'aarij",
+   "meaning": "The Ascending Stairways",
+   "ayah_count": 44,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 71,
+   "name_ar": "سُورَةُ نُوحٍ",
+   "name_en": "Nooh",
+   "meaning": "Noah",
+   "ayah_count": 28,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 72,
+   "name_ar": "سُورَةُ الجِنِّ",
+   "name_en": "Al-Jinn",
+   "meaning": "The Jinn",
+   "ayah_count": 28,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 73,
+   "name_ar": "سُورَةُ المُزَّمِّلِ",
+   "name_en": "Al-Muzzammil",
+   "meaning": "The Enshrouded One",
+   "ayah_count": 20,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 74,
+   "name_ar": "سُورَةُ المُدَّثِّرِ",
+   "name_en": "Al-Muddaththir",
+   "meaning": "The Cloaked One",
+   "ayah_count": 56,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 75,
+   "name_ar": "سُورَةُ القِيَامَةِ",
+   "name_en": "Al-Qiyaama",
+   "meaning": "The Resurrection",
+   "ayah_count": 40,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 76,
+   "name_ar": "سُورَةُ الإِنسَانِ",
+   "name_en": "Al-Insaan",
+   "meaning": "Man",
+   "ayah_count": 31,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 77,
+   "name_ar": "سُورَةُ المُرۡسَلَاتِ",
+   "name_en": "Al-Mursalaat",
+   "meaning": "The Emissaries",
+   "ayah_count": 50,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 78,
+   "name_ar": "سُورَةُ النَّبَإِ",
+   "name_en": "An-Naba",
+   "meaning": "The Announcement",
+   "ayah_count": 40,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 79,
+   "name_ar": "سُورَةُ النَّازِعَاتِ",
+   "name_en": "An-Naazi'aat",
+   "meaning": "Those who drag forth",
+   "ayah_count": 46,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 80,
+   "name_ar": "سُورَةُ عَبَسَ",
+   "name_en": "Abasa",
+   "meaning": "He frowned",
+   "ayah_count": 42,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 81,
+   "name_ar": "سُورَةُ التَّكۡوِيرِ",
+   "name_en": "At-Takwir",
+   "meaning": "The Overthrowing",
+   "ayah_count": 29,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 82,
+   "name_ar": "سُورَةُ الانفِطَارِ",
+   "name_en": "Al-Infitaar",
+   "meaning": "The Cleaving",
+   "ayah_count": 19,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 83,
+   "name_ar": "سُورَةُ المُطَفِّفِينَ",
+   "name_en": "Al-Mutaffifin",
+   "meaning": "Defrauding",
+   "ayah_count": 36,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 84,
+   "name_ar": "سُورَةُ الانشِقَاقِ",
+   "name_en": "Al-Inshiqaaq",
+   "meaning": "The Splitting Open",
+   "ayah_count": 25,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 85,
+   "name_ar": "سُورَةُ البُرُوجِ",
+   "name_en": "Al-Burooj",
+   "meaning": "The Constellations",
+   "ayah_count": 22,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 86,
+   "name_ar": "سُورَةُ الطَّارِقِ",
+   "name_en": "At-Taariq",
+   "meaning": "The Morning Star",
+   "ayah_count": 17,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 87,
+   "name_ar": "سُورَةُ الأَعۡلَىٰ",
+   "name_en": "Al-A'laa",
+   "meaning": "The Most High",
+   "ayah_count": 19,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 88,
+   "name_ar": "سُورَةُ الغَاشِيَةِ",
+   "name_en": "Al-Ghaashiya",
+   "meaning": "The Overwhelming",
+   "ayah_count": 26,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 89,
+   "name_ar": "سُورَةُ الفَجۡرِ",
+   "name_en": "Al-Fajr",
+   "meaning": "The Dawn",
+   "ayah_count": 30,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 90,
+   "name_ar": "سُورَةُ البَلَدِ",
+   "name_en": "Al-Balad",
+   "meaning": "The City",
+   "ayah_count": 20,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 91,
+   "name_ar": "سُورَةُ الشَّمۡسِ",
+   "name_en": "Ash-Shams",
+   "meaning": "The Sun",
+   "ayah_count": 15,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 92,
+   "name_ar": "سُورَةُ اللَّيۡلِ",
+   "name_en": "Al-Lail",
+   "meaning": "The Night",
+   "ayah_count": 21,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 93,
+   "name_ar": "سُورَةُ الضُّحَىٰ",
+   "name_en": "Ad-Dhuhaa",
+   "meaning": "The Morning Hours",
+   "ayah_count": 11,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 94,
+   "name_ar": "سُورَةُ الشَّرۡحِ",
+   "name_en": "Ash-Sharh",
+   "meaning": "The Consolation",
+   "ayah_count": 8,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 95,
+   "name_ar": "سُورَةُ التِّينِ",
+   "name_en": "At-Tin",
+   "meaning": "The Fig",
+   "ayah_count": 8,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 96,
+   "name_ar": "سُورَةُ العَلَقِ",
+   "name_en": "Al-Alaq",
+   "meaning": "The Clot",
+   "ayah_count": 19,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 97,
+   "name_ar": "سُورَةُ القَدۡرِ",
+   "name_en": "Al-Qadr",
+   "meaning": "The Power, Fate",
+   "ayah_count": 5,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 98,
+   "name_ar": "سُورَةُ البَيِّنَةِ",
+   "name_en": "Al-Bayyina",
+   "meaning": "The Evidence",
+   "ayah_count": 8,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 99,
+   "name_ar": "سُورَةُ الزَّلۡزَلَةِ",
+   "name_en": "Az-Zalzala",
+   "meaning": "The Earthquake",
+   "ayah_count": 8,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 100,
+   "name_ar": "سُورَةُ العَادِيَاتِ",
+   "name_en": "Al-Aadiyaat",
+   "meaning": "The Chargers",
+   "ayah_count": 11,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 101,
+   "name_ar": "سُورَةُ القَارِعَةِ",
+   "name_en": "Al-Qaari'a",
+   "meaning": "The Calamity",
+   "ayah_count": 11,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 102,
+   "name_ar": "سُورَةُ التَّكَاثُرِ",
+   "name_en": "At-Takaathur",
+   "meaning": "Competition",
+   "ayah_count": 8,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 103,
+   "name_ar": "سُورَةُ العَصۡرِ",
+   "name_en": "Al-Asr",
+   "meaning": "The Declining Day, Epoch",
+   "ayah_count": 3,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 104,
+   "name_ar": "سُورَةُ الهُمَزَةِ",
+   "name_en": "Al-Humaza",
+   "meaning": "The Traducer",
+   "ayah_count": 9,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 105,
+   "name_ar": "سُورَةُ الفِيلِ",
+   "name_en": "Al-Fil",
+   "meaning": "The Elephant",
+   "ayah_count": 5,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 106,
+   "name_ar": "سُورَةُ قُرَيۡشٍ",
+   "name_en": "Quraish",
+   "meaning": "Quraysh",
+   "ayah_count": 4,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 107,
+   "name_ar": "سُورَةُ المَاعُونِ",
+   "name_en": "Al-Maa'un",
+   "meaning": "Almsgiving",
+   "ayah_count": 7,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 108,
+   "name_ar": "سُورَةُ الكَوۡثَرِ",
+   "name_en": "Al-Kawthar",
+   "meaning": "Abundance",
+   "ayah_count": 3,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 109,
+   "name_ar": "سُورَةُ الكَافِرُونَ",
+   "name_en": "Al-Kaafiroon",
+   "meaning": "The Disbelievers",
+   "ayah_count": 6,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 110,
+   "name_ar": "سُورَةُ النَّصۡرِ",
+   "name_en": "An-Nasr",
+   "meaning": "Divine Support",
+   "ayah_count": 3,
+   "revelation": "Medinan"
+  },
+  {
+   "number": 111,
+   "name_ar": "سُورَةُ المَسَدِ",
+   "name_en": "Al-Masad",
+   "meaning": "The Palm Fibre",
+   "ayah_count": 5,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 112,
+   "name_ar": "سُورَةُ الإِخۡلَاصِ",
+   "name_en": "Al-Ikhlaas",
+   "meaning": "Sincerity",
+   "ayah_count": 4,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 113,
+   "name_ar": "سُورَةُ الفَلَقِ",
+   "name_en": "Al-Falaq",
+   "meaning": "The Dawn",
+   "ayah_count": 5,
+   "revelation": "Meccan"
+  },
+  {
+   "number": 114,
+   "name_ar": "سُورَةُ النَّاسِ",
+   "name_en": "An-Naas",
+   "meaning": "Mankind",
+   "ayah_count": 6,
+   "revelation": "Meccan"
+  }
+ ],
+ "quran_ayahs": [
+  {
+   "surah": 1,
+   "ayah": 1,
+   "global_number": 1,
+   "arabic": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+   "translation": "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
+   "transliteration": "Bismillaahir Rahmaanir Raheem"
+  },
+  {
+   "surah": 1,
+   "ayah": 2,
+   "global_number": 2,
+   "arabic": "ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ",
+   "translation": "[All] praise is [due] to Allah, Lord of the worlds -",
+   "transliteration": "Alhamdu lillaahi Rabbil 'aalameen"
+  },
+  {
+   "surah": 1,
+   "ayah": 3,
+   "global_number": 3,
+   "arabic": "ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+   "translation": "The Entirely Merciful, the Especially Merciful,",
+   "transliteration": "Ar-Rahmaanir-Raheem"
+  },
+  {
+   "surah": 1,
+   "ayah": 4,
+   "global_number": 4,
+   "arabic": "مَٰلِكِ يَوْمِ ٱلدِّينِ",
+   "translation": "Sovereign of the Day of Recompense.",
+   "transliteration": "Maaliki Yawmid-Deen"
+  },
+  {
+   "surah": 1,
+   "ayah": 5,
+   "global_number": 5,
+   "arabic": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ",
+   "translation": "It is You we worship and You we ask for help.",
+   "transliteration": "Iyyaaka na'budu wa lyyaaka nasta'een"
+  },
+  {
+   "surah": 1,
+   "ayah": 6,
+   "global_number": 6,
+   "arabic": "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ",
+   "translation": "Guide us to the straight path -",
+   "transliteration": "Ihdinas-Siraatal-Mustaqeem"
+  },
+  {
+   "surah": 1,
+   "ayah": 7,
+   "global_number": 7,
+   "arabic": "صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ",
+   "translation": "The path of those upon whom You have bestowed favor, not of those who have evoked [Your] anger or of those who are astray.",
+   "transliteration": "Siraatal-lazeena an'amta 'alaihim ghayril-maghdoobi 'alaihim wa lad-daaalleen"
+  },
+  {
+   "surah": 2,
+   "ayah": 201,
+   "global_number": 208,
+   "arabic": "وَمِنْهُم مَّن يَقُولُ رَبَّنَآ ءَاتِنَا فِى ٱلدُّنْيَا حَسَنَةًۭ وَفِى ٱلْءَاخِرَةِ حَسَنَةًۭ وَقِنَا عَذَابَ ٱلنَّارِ",
+   "translation": "But among them is he who says, \"Our Lord, give us in this world [that which is] good and in the Hereafter [that which is] good and protect us from the punishment of the Fire.\"",
+   "transliteration": "Wa minhum mai yaqoolu rabbanaaa aatina fid dunyaa hasanatawn wa fil aakhirati hasanatanw wa qinaa azaaban Naar"
+  },
+  {
+   "surah": 4,
+   "ayah": 86,
+   "global_number": 579,
+   "arabic": "وَإِذَا حُيِّيتُم بِتَحِيَّةٍۢ فَحَيُّوا۟ بِأَحْسَنَ مِنْهَآ أَوْ رُدُّوهَآ ۗ إِنَّ ٱللَّهَ كَانَ عَلَىٰ كُلِّ شَىْءٍ حَسِيبًا",
+   "translation": "And when you are greeted with a greeting, greet [in return] with one better than it or [at least] return it [in a like manner]. Indeed, Allah is ever, over all things, an Accountant.",
+   "transliteration": "Wa izaa huyyeetum bitahiy yatin fahaiyoo bi ahsana minhaaa aw ruddoohaa; innal laaha kaana 'alaa kulli shai'in Haseeba"
+  },
+  {
+   "surah": 17,
+   "ayah": 23,
+   "global_number": 2052,
+   "arabic": "۞ وَقَضَىٰ رَبُّكَ أَلَّا تَعْبُدُوٓا۟ إِلَّآ إِيَّاهُ وَبِٱلْوَٰلِدَيْنِ إِحْسَٰنًا ۚ إِمَّا يَبْلُغَنَّ عِندَكَ ٱلْكِبَرَ أَحَدُهُمَآ أَوْ كِلَاهُمَا فَلَا تَقُل لَّهُمَآ أُفٍّۢ وَلَا تَنْهَرْهُمَا وَقُل لَّهُمَا قَوْلًۭا كَرِيمًۭا",
+   "translation": "And your Lord has decreed that you not worship except Him, and to parents, good treatment. Whether one or both of them reach old age [while] with you, say not to them [so much as], \"uff,\" and do not repel them but speak to them a noble word.",
+   "transliteration": "Wa qadaa Rabbuka allaa ta'budooo illaaa iyyaahu wa bilwaalidaini ihsaanaa; immaa yablughanna 'indakal kibara ahaduhumaaa aw kilaahumaa falaa taqul lahumaaa uffinw wa laa tanharhumaa wa qullahumaa qawlan kareemaa"
+  },
+  {
+   "surah": 17,
+   "ayah": 24,
+   "global_number": 2053,
+   "arabic": "وَٱخْفِضْ لَهُمَا جَنَاحَ ٱلذُّلِّ مِنَ ٱلرَّحْمَةِ وَقُل رَّبِّ ٱرْحَمْهُمَا كَمَا رَبَّيَانِى صَغِيرًۭا",
+   "translation": "And lower to them the wing of humility out of mercy and say, \"My Lord, have mercy upon them as they brought me up [when I was] small.\"",
+   "transliteration": "Wakhfid lahumaa janaahaz zulli minar rahmati wa qur Rabbir hamhumaa kamaa rabbayaanee sagheera"
+  },
+  {
+   "surah": 20,
+   "ayah": 114,
+   "global_number": 2462,
+   "arabic": "فَتَعَٰلَى ٱللَّهُ ٱلْمَلِكُ ٱلْحَقُّ ۗ وَلَا تَعْجَلْ بِٱلْقُرْءَانِ مِن قَبْلِ أَن يُقْضَىٰٓ إِلَيْكَ وَحْيُهُۥ ۖ وَقُل رَّبِّ زِدْنِى عِلْمًۭا",
+   "translation": "So high [above all] is Allah, the Sovereign, the Truth. And, [O Muhammad], do not hasten with [recitation of] the Qur'an before its revelation is completed to you, and say, \"My Lord, increase me in knowledge.\"",
+   "transliteration": "Fata'aalal laahul Malikul Haqq; wa laa ta'jal bil Quraani min qabli ai yuqdaaa ilaika wahyuhoo wa qur Rabbi zidnee 'ilmaa"
+  },
+  {
+   "surah": 25,
+   "ayah": 74,
+   "global_number": 2929,
+   "arabic": "وَٱلَّذِينَ يَقُولُونَ رَبَّنَا هَبْ لَنَا مِنْ أَزْوَٰجِنَا وَذُرِّيَّٰتِنَا قُرَّةَ أَعْيُنٍۢ وَٱجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا",
+   "translation": "And those who say, \"Our Lord, grant us from among our wives and offspring comfort to our eyes and make us an example for the righteous.\"",
+   "transliteration": "Wallazeena yaqooloona Rabbanaa hab lanaa min azwaajinaa wa zurriyaatinaa qurrata a'yuninw waj 'alnaa lilmuttaqeena Imaamaa"
+  },
+  {
+   "surah": 103,
+   "ayah": 1,
+   "global_number": 6177,
+   "arabic": "وَٱلْعَصْرِ",
+   "translation": "By time,",
+   "transliteration": "Wal' asr"
+  },
+  {
+   "surah": 103,
+   "ayah": 2,
+   "global_number": 6178,
+   "arabic": "إِنَّ ٱلْإِنسَٰنَ لَفِى خُسْرٍ",
+   "translation": "Indeed, mankind is in loss,",
+   "transliteration": "Innal insaana lafee khusr"
+  },
+  {
+   "surah": 103,
+   "ayah": 3,
+   "global_number": 6179,
+   "arabic": "إِلَّا ٱلَّذِينَ ءَامَنُوا۟ وَعَمِلُوا۟ ٱلصَّٰلِحَٰتِ وَتَوَاصَوْا۟ بِٱلْحَقِّ وَتَوَاصَوْا۟ بِٱلصَّبْرِ",
+   "translation": "Except for those who have believed and done righteous deeds and advised each other to truth and advised each other to patience.",
+   "transliteration": "Il lal lazeena aamanu wa 'amilus saali haati wa tawa saw bil haqqi wa tawa saw bis sabr"
+  },
+  {
+   "surah": 104,
+   "ayah": 1,
+   "global_number": 6180,
+   "arabic": "وَيْلٌۭ لِّكُلِّ هُمَزَةٍۢ لُّمَزَةٍ",
+   "translation": "Woe to every scorner and mocker",
+   "transliteration": "Wai lul-li kulli hu mazatil-lumaza"
+  },
+  {
+   "surah": 104,
+   "ayah": 2,
+   "global_number": 6181,
+   "arabic": "ٱلَّذِى جَمَعَ مَالًۭا وَعَدَّدَهُۥ",
+   "translation": "Who collects wealth and [continuously] counts it.",
+   "transliteration": "Al-lazi jama'a maalaw wa'addadah"
+  },
+  {
+   "surah": 104,
+   "ayah": 3,
+   "global_number": 6182,
+   "arabic": "يَحْسَبُ أَنَّ مَالَهُۥٓ أَخْلَدَهُۥ",
+   "translation": "He thinks that his wealth will make him immortal.",
+   "transliteration": "Yahsabu anna maalahu akhladah"
+  },
+  {
+   "surah": 104,
+   "ayah": 4,
+   "global_number": 6183,
+   "arabic": "كَلَّا ۖ لَيُنۢبَذَنَّ فِى ٱلْحُطَمَةِ",
+   "translation": "No! He will surely be thrown into the Crusher.",
+   "transliteration": "Kalla layum ba zanna fil hutamah"
+  },
+  {
+   "surah": 104,
+   "ayah": 5,
+   "global_number": 6184,
+   "arabic": "وَمَآ أَدْرَىٰكَ مَا ٱلْحُطَمَةُ",
+   "translation": "And what can make you know what is the Crusher?",
+   "transliteration": "Wa maa adraaka mal-hutamah"
+  },
+  {
+   "surah": 104,
+   "ayah": 6,
+   "global_number": 6185,
+   "arabic": "نَارُ ٱللَّهِ ٱلْمُوقَدَةُ",
+   "translation": "It is the fire of Allah, [eternally] fueled,",
+   "transliteration": "Narul laahil-mooqada"
+  },
+  {
+   "surah": 104,
+   "ayah": 7,
+   "global_number": 6186,
+   "arabic": "ٱلَّتِى تَطَّلِعُ عَلَى ٱلْأَفْـِٔدَةِ",
+   "translation": "Which mounts directed at the hearts.",
+   "transliteration": "Al latee tat tali'u 'alalafidah"
+  },
+  {
+   "surah": 104,
+   "ayah": 8,
+   "global_number": 6187,
+   "arabic": "إِنَّهَا عَلَيْهِم مُّؤْصَدَةٌۭ",
+   "translation": "Indeed, Hellfire will be closed down upon them",
+   "transliteration": "Innaha 'alaihim moosada"
+  },
+  {
+   "surah": 104,
+   "ayah": 9,
+   "global_number": 6188,
+   "arabic": "فِى عَمَدٍۢ مُّمَدَّدَةٍۭ",
+   "translation": "In extended columns.",
+   "transliteration": "Fee 'amadim-mu mad dadah"
+  },
+  {
+   "surah": 105,
+   "ayah": 1,
+   "global_number": 6189,
+   "arabic": "أَلَمْ تَرَ كَيْفَ فَعَلَ رَبُّكَ بِأَصْحَٰبِ ٱلْفِيلِ",
+   "translation": "Have you not considered, [O Muhammad], how your Lord dealt with the companions of the elephant?",
+   "transliteration": "Alam tara kaifa fa'ala rabbuka bi ashaabil feel"
+  },
+  {
+   "surah": 105,
+   "ayah": 2,
+   "global_number": 6190,
+   "arabic": "أَلَمْ يَجْعَلْ كَيْدَهُمْ فِى تَضْلِيلٍۢ",
+   "translation": "Did He not make their plan into misguidance?",
+   "transliteration": "Alam yaj'al kai dahum fee tad leel"
+  },
+  {
+   "surah": 105,
+   "ayah": 3,
+   "global_number": 6191,
+   "arabic": "وَأَرْسَلَ عَلَيْهِمْ طَيْرًا أَبَابِيلَ",
+   "translation": "And He sent against them birds in flocks,",
+   "transliteration": "Wa arsala 'alaihim tairan abaabeel"
+  },
+  {
+   "surah": 105,
+   "ayah": 4,
+   "global_number": 6192,
+   "arabic": "تَرْمِيهِم بِحِجَارَةٍۢ مِّن سِجِّيلٍۢ",
+   "translation": "Striking them with stones of hard clay,",
+   "transliteration": "Tar meehim bi hi jaaratim min sij jeel"
+  },
+  {
+   "surah": 105,
+   "ayah": 5,
+   "global_number": 6193,
+   "arabic": "فَجَعَلَهُمْ كَعَصْفٍۢ مَّأْكُولٍۭ",
+   "translation": "And He made them like eaten straw.",
+   "transliteration": "Faja 'alahum ka'asfim m'akool"
+  },
+  {
+   "surah": 108,
+   "ayah": 1,
+   "global_number": 6205,
+   "arabic": "إِنَّآ أَعْطَيْنَٰكَ ٱلْكَوْثَرَ",
+   "translation": "Indeed, We have granted you, [O Muhammad], al-Kawthar.",
+   "transliteration": "Innaa a'taina kal kauthar"
+  },
+  {
+   "surah": 108,
+   "ayah": 2,
+   "global_number": 6206,
+   "arabic": "فَصَلِّ لِرَبِّكَ وَٱنْحَرْ",
+   "translation": "So pray to your Lord and sacrifice [to Him alone].",
+   "transliteration": "Fa salli li rabbika wanhar"
+  },
+  {
+   "surah": 108,
+   "ayah": 3,
+   "global_number": 6207,
+   "arabic": "إِنَّ شَانِئَكَ هُوَ ٱلْأَبْتَرُ",
+   "translation": "Indeed, your enemy is the one cut off.",
+   "transliteration": "Inna shani-aka huwal abtar"
+  },
+  {
+   "surah": 109,
+   "ayah": 1,
+   "global_number": 6208,
+   "arabic": "قُلْ يَٰٓأَيُّهَا ٱلْكَٰفِرُونَ",
+   "translation": "Say, \"O disbelievers,",
+   "transliteration": "Qul yaa-ai yuhal kaafiroon"
+  },
+  {
+   "surah": 109,
+   "ayah": 2,
+   "global_number": 6209,
+   "arabic": "لَآ أَعْبُدُ مَا تَعْبُدُونَ",
+   "translation": "I do not worship what you worship.",
+   "transliteration": "Laa a'budu ma t'abudoon"
+  },
+  {
+   "surah": 109,
+   "ayah": 3,
+   "global_number": 6210,
+   "arabic": "وَلَآ أَنتُمْ عَٰبِدُونَ مَآ أَعْبُدُ",
+   "translation": "Nor are you worshippers of what I worship.",
+   "transliteration": "Wa laa antum 'aabidoona maa a'bud"
+  },
+  {
+   "surah": 109,
+   "ayah": 4,
+   "global_number": 6211,
+   "arabic": "وَلَآ أَنَا۠ عَابِدٌۭ مَّا عَبَدتُّمْ",
+   "translation": "Nor will I be a worshipper of what you worship.",
+   "transliteration": "Wa laa ana 'abidum maa 'abattum"
+  },
+  {
+   "surah": 109,
+   "ayah": 5,
+   "global_number": 6212,
+   "arabic": "وَلَآ أَنتُمْ عَٰبِدُونَ مَآ أَعْبُدُ",
+   "translation": "Nor will you be worshippers of what I worship.",
+   "transliteration": "Wa laa antum 'aabidoona ma a'bud"
+  },
+  {
+   "surah": 109,
+   "ayah": 6,
+   "global_number": 6213,
+   "arabic": "لَكُمْ دِينُكُمْ وَلِىَ دِينِ",
+   "translation": "For you is your religion, and for me is my religion.\"",
+   "transliteration": "Lakum deenukum wa liya deen."
+  },
+  {
+   "surah": 110,
+   "ayah": 1,
+   "global_number": 6214,
+   "arabic": "إِذَا جَآءَ نَصْرُ ٱللَّهِ وَٱلْفَتْحُ",
+   "translation": "When the victory of Allah has come and the conquest,",
+   "transliteration": "Iza jaa-a nas rullahi walfath"
+  },
+  {
+   "surah": 110,
+   "ayah": 2,
+   "global_number": 6215,
+   "arabic": "وَرَأَيْتَ ٱلنَّاسَ يَدْخُلُونَ فِى دِينِ ٱللَّهِ أَفْوَاجًۭا",
+   "translation": "And you see the people entering into the religion of Allah in multitudes,",
+   "transliteration": "Wa ra-aitan naasa yadkhuloona fee deenil laahi afwajah"
+  },
+  {
+   "surah": 110,
+   "ayah": 3,
+   "global_number": 6216,
+   "arabic": "فَسَبِّحْ بِحَمْدِ رَبِّكَ وَٱسْتَغْفِرْهُ ۚ إِنَّهُۥ كَانَ تَوَّابًۢا",
+   "translation": "Then exalt [Him] with praise of your Lord and ask forgiveness of Him. Indeed, He is ever Accepting of repentance.",
+   "transliteration": "Fa sab bih bihamdi rabbika was taghfir, innahu kaana tawwaaba"
+  },
+  {
+   "surah": 111,
+   "ayah": 1,
+   "global_number": 6217,
+   "arabic": "تَبَّتْ يَدَآ أَبِى لَهَبٍۢ وَتَبَّ",
+   "translation": "May the hands of Abu Lahab be ruined, and ruined is he.",
+   "transliteration": "Tab bat yadaa abee Lahabinw-wa tabb"
+  },
+  {
+   "surah": 111,
+   "ayah": 2,
+   "global_number": 6218,
+   "arabic": "مَآ أَغْنَىٰ عَنْهُ مَالُهُۥ وَمَا كَسَبَ",
+   "translation": "His wealth will not avail him or that which he gained.",
+   "transliteration": "Maa aghna 'anhu maaluhu wa ma kasab"
+  },
+  {
+   "surah": 111,
+   "ayah": 3,
+   "global_number": 6219,
+   "arabic": "سَيَصْلَىٰ نَارًۭا ذَاتَ لَهَبٍۢ",
+   "translation": "He will [enter to] burn in a Fire of [blazing] flame",
+   "transliteration": "Sa yas laa naran zaata lahab"
+  },
+  {
+   "surah": 111,
+   "ayah": 4,
+   "global_number": 6220,
+   "arabic": "وَٱمْرَأَتُهُۥ حَمَّالَةَ ٱلْحَطَبِ",
+   "translation": "And his wife [as well] - the carrier of firewood.",
+   "transliteration": "Wam ra-atuh hamma latal-hatab"
+  },
+  {
+   "surah": 111,
+   "ayah": 5,
+   "global_number": 6221,
+   "arabic": "فِى جِيدِهَا حَبْلٌۭ مِّن مَّسَدٍۭ",
+   "translation": "Around her neck is a rope of [twisted] fiber.",
+   "transliteration": "Fee jeediha hab lum mim-masad"
+  },
+  {
+   "surah": 112,
+   "ayah": 1,
+   "global_number": 6222,
+   "arabic": "قُلْ هُوَ ٱللَّهُ أَحَدٌ",
+   "translation": "Say, \"He is Allah, [who is] One,",
+   "transliteration": "Qul huwal laahu ahad"
+  },
+  {
+   "surah": 112,
+   "ayah": 2,
+   "global_number": 6223,
+   "arabic": "ٱللَّهُ ٱلصَّمَدُ",
+   "translation": "Allah, the Eternal Refuge.",
+   "transliteration": "Allah hus-samad"
+  },
+  {
+   "surah": 112,
+   "ayah": 3,
+   "global_number": 6224,
+   "arabic": "لَمْ يَلِدْ وَلَمْ يُولَدْ",
+   "translation": "He neither begets nor is born,",
+   "transliteration": "Lam yalid wa lam yoolad"
+  },
+  {
+   "surah": 112,
+   "ayah": 4,
+   "global_number": 6225,
+   "arabic": "وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌۢ",
+   "translation": "Nor is there to Him any equivalent.\"",
+   "transliteration": "Wa lam yakul-lahu kufuwan ahad"
+  },
+  {
+   "surah": 113,
+   "ayah": 1,
+   "global_number": 6226,
+   "arabic": "قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ",
+   "translation": "Say, \"I seek refuge in the Lord of daybreak",
+   "transliteration": "Qul a'uzoo bi rabbil-falaq"
+  },
+  {
+   "surah": 113,
+   "ayah": 2,
+   "global_number": 6227,
+   "arabic": "مِن شَرِّ مَا خَلَقَ",
+   "translation": "From the evil of that which He created",
+   "transliteration": "Min sharri ma khalaq"
+  },
+  {
+   "surah": 113,
+   "ayah": 3,
+   "global_number": 6228,
+   "arabic": "وَمِن شَرِّ غَاسِقٍ إِذَا وَقَبَ",
+   "translation": "And from the evil of darkness when it settles",
+   "transliteration": "Wa min sharri ghasiqin iza waqab"
+  },
+  {
+   "surah": 113,
+   "ayah": 4,
+   "global_number": 6229,
+   "arabic": "وَمِن شَرِّ ٱلنَّفَّٰثَٰتِ فِى ٱلْعُقَدِ",
+   "translation": "And from the evil of the blowers in knots",
+   "transliteration": "Wa min sharrin-naffaa-thaati fil 'uqad"
+  },
+  {
+   "surah": 113,
+   "ayah": 5,
+   "global_number": 6230,
+   "arabic": "وَمِن شَرِّ حَاسِدٍ إِذَا حَسَدَ",
+   "translation": "And from the evil of an envier when he envies.\"",
+   "transliteration": "Wa min shar ri haasidin iza hasad"
+  },
+  {
+   "surah": 114,
+   "ayah": 1,
+   "global_number": 6231,
+   "arabic": "قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ",
+   "translation": "Say, \"I seek refuge in the Lord of mankind,",
+   "transliteration": "Qul a'uzu birabbin naas"
+  },
+  {
+   "surah": 114,
+   "ayah": 2,
+   "global_number": 6232,
+   "arabic": "مَلِكِ ٱلنَّاسِ",
+   "translation": "The Sovereign of mankind.",
+   "transliteration": "Malikin naas"
+  },
+  {
+   "surah": 114,
+   "ayah": 3,
+   "global_number": 6233,
+   "arabic": "إِلَٰهِ ٱلنَّاسِ",
+   "translation": "The God of mankind,",
+   "transliteration": "Ilaahin naas"
+  },
+  {
+   "surah": 114,
+   "ayah": 4,
+   "global_number": 6234,
+   "arabic": "مِن شَرِّ ٱلْوَسْوَاسِ ٱلْخَنَّاسِ",
+   "translation": "From the evil of the retreating whisperer -",
+   "transliteration": "Min sharril was waasil khannaas"
+  },
+  {
+   "surah": 114,
+   "ayah": 5,
+   "global_number": 6235,
+   "arabic": "ٱلَّذِى يُوَسْوِسُ فِى صُدُورِ ٱلنَّاسِ",
+   "translation": "Who whispers [evil] into the breasts of mankind -",
+   "transliteration": "Al lazee yuwas wisu fee sudoorin naas"
+  },
+  {
+   "surah": 114,
+   "ayah": 6,
+   "global_number": 6236,
+   "arabic": "مِنَ ٱلْجِنَّةِ وَٱلنَّاسِ",
+   "translation": "From among the jinn and mankind.\"",
+   "transliteration": "Minal jinnati wan naas"
+  }
+ ],
+ "hadith_cache": [
+  {
+   "collection": "bukhari",
+   "number": 13,
+   "text_en": "Narrated Anas: The Prophet (ﷺ) said, \"None of you will have faith till he wishes for his (Muslim) brother what he likes for himself",
+   "text_ar": "حَدَّثَنَا مُسَدَّدٌ، قَالَ حَدَّثَنَا يَحْيَى، عَنْ شُعْبَةَ، عَنْ قَتَادَةَ، عَنْ أَنَسٍ ـ رضى الله عنه ـ عَنِ النَّبِيِّ صلى الله عليه وسلم‏.‏ وَعَنْ حُسَيْنٍ الْمُعَلِّمِ، قَالَ حَدَّثَنَا قَتَادَةُ، عَنْ أَنَسٍ، عَنِ النَّبِيِّ صلى الله عليه وسلم قَالَ ‏ \"‏ لا يُؤْمِنُ أَحَدُكُمْ حَتَّى يُحِبَّ لأَخِيهِ مَا يُحِبُّ لِنَفْسِهِ ‏\"‏‏.‏",
+   "grades": "[]",
+   "fetched_at": "2026-09-19T01:10:56"
+  },
+  {
+   "collection": "bukhari",
+   "number": 5376,
+   "text_en": "Narrated `Umar bin Abi Salama:I was a boy under the care of Allah's Messenger (ﷺ) and my hand used to go around the dish while I was eating. So Allah's Messenger (ﷺ) said to me, 'O boy! Mention the Name of Allah and eat with your right hand, and eat of the dish what is nearer to you.\" Since then I have applied those instructions when eating",
+   "text_ar": "حَدَّثَنَا عَلِيُّ بْنُ عَبْدِ اللَّهِ، أَخْبَرَنَا سُفْيَانُ، قَالَ الْوَلِيدُ بْنُ كَثِيرٍ أَخْبَرَنِي أَنَّهُ، سَمِعَ وَهْبَ بْنَ كَيْسَانَ، أَنَّهُ سَمِعَ عُمَرَ بْنَ أَبِي سَلَمَةَ، يَقُولُ كُنْتُ غُلاَمًا فِي حَجْرِ رَسُولِ اللَّهِ صلى الله عليه وسلم وَكَانَتْ يَدِي تَطِيشُ فِي الصَّحْفَةِ فَقَالَ لِي رَسُولُ اللَّهِ صلى الله عليه وسلم ‏ \"‏ يَا غُلاَمُ سَمِّ اللَّهَ، وَكُلْ بِيَمِينِكَ وَكُلْ مِمَّا يَلِيكَ ‏\"‏‏.‏ فَمَا زَالَتْ تِلْكَ طِعْمَتِي بَعْدُ‏.‏",
+   "grades": "[]",
+   "fetched_at": "2026-09-19T01:10:55"
+  },
+  {
+   "collection": "bukhari",
+   "number": 5971,
+   "text_en": "Narrated Abu Huraira:A man came to Allah's Messenger (ﷺ) and said, \"O Allah's Messenger (ﷺ)! Who is more entitled to be treated with the best companionship by me?\" The Prophet (ﷺ) said, \"Your mother.\" The man said. \"Who is next?\" The Prophet said, \"Your mother.\" The man further said, \"Who is next?\" The Prophet (ﷺ) said, \"Your mother.\" The man asked for the fourth time, \"Who is next?\" The Prophet (ﷺ) said, \"Your father",
+   "text_ar": "حَدَّثَنَا قُتَيْبَةُ بْنُ سَعِيدٍ، حَدَّثَنَا جَرِيرٌ، عَنْ عُمَارَةَ بْنِ الْقَعْقَاعِ بْنِ شُبْرُمَةَ، عَنْ أَبِي زُرْعَةَ، عَنْ أَبِي هُرَيْرَةَ ـ رضى الله عنه ـ قَالَ جَاءَ رَجُلٌ إِلَى رَسُولِ اللَّهِ صلى الله عليه وسلم فَقَالَ يَا رَسُولَ اللَّهِ مَنْ أَحَقُّ بِحُسْنِ صَحَابَتِي قَالَ ‏\"‏ أُمُّكَ ‏\"‏‏.‏ قَالَ ثُمَّ مَنْ قَالَ ‏\"‏ أُمُّكَ ‏\"‏‏.‏ قَالَ ثُمَّ مَنْ قَالَ ‏\"‏ أُمُّكَ ‏\"‏‏.‏ قَالَ ثُمَّ مَنْ قَالَ ‏\"‏ ثُمَّ أَبُوكَ ‏\"‏‏.‏ وَقَالَ ابْنُ شُبْرُمَةَ وَيَحْيَى بْنُ أَيُّوبَ حَدَّثَنَا أَبُو زُرْعَةَ مِثْلَهُ‏.‏",
+   "grades": "[]",
+   "fetched_at": "2026-09-19T01:10:56"
+  },
+  {
+   "collection": "bukhari",
+   "number": 6094,
+   "text_en": "Narrated `Abdullah:The Prophet (ﷺ) said, \"Truthfulness leads to righteousness, and righteousness leads to Paradise. And a man keeps on telling the truth until he becomes a truthful person. Falsehood leads to Al-Fajur (i.e. wickedness, evil-doing), and Al-Fajur (wickedness) leads to the (Hell) Fire, and a man may keep on telling lies till he is written before Allah, a liar",
+   "text_ar": "حَدَّثَنَا عُثْمَانُ بْنُ أَبِي شَيْبَةَ، حَدَّثَنَا جَرِيرٌ، عَنْ مَنْصُورٍ، عَنْ أَبِي وَائِلٍ، عَنْ عَبْدِ اللَّهِ ـ رضى الله عنه ـ عَنِ النَّبِيِّ صلى الله عليه وسلم قَالَ ‏ \"‏ إِنَّ الصِّدْقَ يَهْدِي إِلَى الْبِرِّ، وَإِنَّ الْبِرَّ يَهْدِي إِلَى الْجَنَّةِ، وَإِنَّ الرَّجُلَ لَيَصْدُقُ حَتَّى يَكُونَ صِدِّيقًا، وَإِنَّ الْكَذِبَ يَهْدِي إِلَى الْفُجُورِ، وَإِنَّ الْفُجُورَ يَهْدِي إِلَى النَّارِ، وَإِنَّ الرَّجُلَ لَيَكْذِبُ، حَتَّى يُكْتَبَ عِنْدَ اللَّهِ كَذَّابًا ‏\"‏‏.‏",
+   "grades": "[]",
+   "fetched_at": "2026-09-19T01:10:56"
+  },
+  {
+   "collection": "bukhari",
+   "number": 6136,
+   "text_en": "Narrated Abu Huraira:The Prophet (ﷺ) said, \"Whoever believes in Allah and the Last Day, should not hurt his neighbor and whoever believes in Allah and the Last Day, should serve his guest generously and whoever believes in Allah and the Last Day, should speak what is good or keep silent",
+   "text_ar": "حَدَّثَنَا عَبْدُ اللَّهِ بْنُ مُحَمَّدٍ، حَدَّثَنَا ابْنُ مَهْدِيٍّ، حَدَّثَنَا سُفْيَانُ، عَنْ أَبِي حَصِينٍ، عَنْ أَبِي صَالِحٍ، عَنْ أَبِي هُرَيْرَةَ، عَنِ النَّبِيِّ صلى الله عليه وسلم قَالَ ‏ \"‏ مَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلاَ يُؤْذِ جَارَهُ، وَمَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيُكْرِمْ ضَيْفَهُ، وَمَنْ كَانَ يُؤْمِنُ بِاللَّهِ وَالْيَوْمِ الآخِرِ فَلْيَقُلْ خَيْرًا أَوْ لِيَصْمُتْ ‏\"‏‏.‏",
+   "grades": "[]",
+   "fetched_at": "2026-09-19T01:10:56"
+  },
+  {
+   "collection": "bukhari",
+   "number": 6224,
+   "text_en": "Narrated Abu Huraira:The Prophet (ﷺ) said, \" If anyone of you sneezes, he should say 'Al-Hamduli l-lah' (Praise be to Allah), and his (Muslim) brother or companion should say to him, 'Yar-hamuka-l-lah' (May Allah bestow his Mercy on you). When the latter says 'Yar-hamuka-llah\", the former should say, 'Yahdikumul-lah wa Yuslih balakum' (May Allah give you guidance and improve your condition)",
+   "text_ar": "حَدَّثَنَا مَالِكُ بْنُ إِسْمَاعِيلَ، حَدَّثَنَا عَبْدُ الْعَزِيزِ بْنُ أَبِي سَلَمَةَ، أَخْبَرَنَا عَبْدُ اللَّهِ بْنُ دِينَارٍ، عَنْ أَبِي صَالِحٍ، عَنْ أَبِي هُرَيْرَةَ ـ رضى الله عنه ـ عَنِ النَّبِيِّ صلى الله عليه وسلم قَالَ ‏ \"‏ إِذَا عَطَسَ أَحَدُكُمْ فَلْيَقُلِ الْحَمْدُ لِلَّهِ‏.‏ وَلْيَقُلْ لَهُ أَخُوهُ أَوْ صَاحِبُهُ يَرْحَمُكَ اللَّهُ‏.‏ فَإِذَا قَالَ لَهُ يَرْحَمُكَ اللَّهُ‏.‏ فَلْيَقُلْ يَهْدِيكُمُ اللَّهُ وَيُصْلِحُ بَالَكُمْ ‏\"‏‏.‏",
+   "grades": "[]",
+   "fetched_at": "2026-09-19T01:10:56"
+  },
+  {
+   "collection": "tirmidhi",
+   "number": 1924,
+   "text_en": "Abdullah bin 'Amr narrated that the Messenger of Allah said:\"The merciful are shown mercy by Ar-Rahman. Be merciful on the earth, and you will be shown mercy from Who is above the heavens. The womb is named after Ar-Rahman, so whoever connects it, Allah connects him, and whoever severs it, Allah severs him",
+   "text_ar": "حَدَّثَنَا ابْنُ أَبِي عُمَرَ، حَدَّثَنَا سُفْيَانُ، عَنْ عَمْرِو بْنِ دِينَارٍ، عَنْ أَبِي قَابُوسَ، عَنْ عَبْدِ اللَّهِ بْنِ عَمْرٍو، قَالَ قَالَ رَسُولُ اللَّهِ صلى الله عليه وسلم ‏ \"‏ الرَّاحِمُونَ يَرْحَمُهُمُ الرَّحْمَنُ ارْحَمُوا مَنْ فِي الأَرْضِ يَرْحَمْكُمْ مَنْ فِي السَّمَاءِ الرَّحِمُ شُجْنَةٌ مِنَ الرَّحْمَنِ فَمَنْ وَصَلَهَا وَصَلَهُ اللَّهُ وَمَنْ قَطَعَهَا قَطَعَهُ اللَّهُ ‏\"‏ ‏.‏ قَالَ أَبُو عِيسَى هَذَا حَدِيثٌ حَسَنٌ صَحِيحٌ ‏.‏",
+   "grades": "[{\"name\": \"Ahmad Muhammad Shakir\", \"grade\": \"Sahih\"}, {\"name\": \"Al-Albani\", \"grade\": \"Sahih\"}, {\"name\": \"Bashar Awad Maarouf\", \"grade\": \"Hasan Sahih\"}, {\"name\": \"Zubair Ali Zai\", \"grade\": \"Isnaad Hasan\"}]",
+   "fetched_at": "2026-09-19T01:10:56"
+  },
+  {
+   "collection": "tirmidhi",
+   "number": 1956,
+   "text_en": "Abu Dharr narrated that the Messenger of Allah said :\"Your smiling in the face of your brother is charity, commanding good and forbidding evil is charity, your giving directions to a man lost in the land is charity for you. Your seeing for a man with bad sight is a charity for you, your removal of a rock, a thorn or a bone from the road is charity for you. Your pouring what remains from your bucket into the bucket of your brother is charity for you",
+   "text_ar": "حَدَّثَنَا عَبَّاسُ بْنُ عَبْدِ الْعَظِيمِ الْعَنْبَرِيُّ، حَدَّثَنَا النَّضْرُ بْنُ مُحَمَّدٍ الْجُرَشِيُّ الْيَمَامِيُّ، حَدَّثَنَا عِكْرِمَةُ بْنُ عَمَّارٍ، حَدَّثَنَا أَبُو زُمَيْلٍ، عَنْ مَالِكِ بْنِ مَرْثَدٍ، عَنْ أَبِيهِ، عَنْ أَبِي ذَرٍّ، قَالَ قَالَ رَسُولُ اللَّهِ صلى الله عليه وسلم ‏ \"‏ تَبَسُّمُكَ فِي وَجْهِ أَخِيكَ لَكَ صَدَقَةٌ وَأَمْرُكَ بِالْمَعْرُوفِ وَنَهْيُكَ عَنِ الْمُنْكَرِ صَدَقَةٌ وَإِرْشَادُكَ الرَّجُلَ فِي أَرْضِ الضَّلاَلِ لَكَ صَدَقَةٌ وَبَصَرُكَ لِلرَّجُلِ الرَّدِيءِ الْبَصَرِ لَكَ صَدَقَةٌ وَإِمَاطَتُكَ الْحَجَرَ وَالشَّوْكَةَ وَالْعَظْمَ عَنِ الطَّرِيقِ لَكَ صَدَقَةٌ وَإِفْرَاغُكَ مِنْ دَلْوِكَ فِي دَلْوِ أَخِيكَ لَكَ صَدَقَةٌ ‏\"‏ ‏.‏ قَالَ وَفِي الْبَابِ عَنِ ابْنِ مَسْعُودٍ وَجَابِرٍ وَحُذَيْفَةَ وَعَائِشَةَ وَأَبِي هُرَيْرَةَ ‏.‏ قَالَ أَبُو عِيسَى هَذَا حَدِيثٌ حَسَنٌ غَرِيبٌ ‏.‏ وَأَبُو زُمَيْلٍ اسْمُهُ سِمَاكُ بْنُ الْوَلِيدِ الْحَنَفِيُّ ‏.‏",
+   "grades": "[{\"name\": \"Ahmad Muhammad Shakir\", \"grade\": \"Sahih\"}, {\"name\": \"Al-Albani\", \"grade\": \"Sahih\"}, {\"name\": \"Zubair Ali Zai\", \"grade\": \"Isnaad Hasan\"}]",
+   "fetched_at": "2026-09-19T01:10:56"
+  }
+ ]
+}

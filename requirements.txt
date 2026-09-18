@@ -16,3 +16,10 @@ pywin32
 # Personal memory (memory/) - semantic search ke liye optional, bhaari hai
 # (~500 MB, torch samet). Ye na ho toh bhi fuzzy/keyword search chalta hai.
 sentence-transformers
+# Islamic tutor (islamic/) - recitation checking with a local Quran speech
+# model (tarteel-ai/whisper-base-ar-quran, ~290 MB, downloaded on first use).
+# Optional: lessons, audio and quizzes work without these; only
+# "test my recitation" needs them. The child speech coach uses the same two
+# for word practice (openai/whisper-base, ~290 MB, downloaded on first use).
+torch
+transformers

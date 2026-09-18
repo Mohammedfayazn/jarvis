@@ -42,10 +42,17 @@ class EventBus:
     audio loops chal rahe hain - await karne se woh rasta dheema ho jata.
     """
 
+    # Browser se aane wale commands - sirf yehi naam maane jaate hain
+    COMMANDS = {"stop_audio", "cancel_recitation"}
+
     def __init__(self):
         self._clients = set()
         # Naya client turant sahi haalat dekhe, agle event ka intezaar na kare.
         self._last_state = {"type": "state", "value": "connecting"}
+        # Lesson panel (Quran tutor, speech coach) khula ho toh naya/reconnect
+        # hua tab bhi use dekhe
+        self._last_lesson = None
+        self.on_command = None
 
     @property
     def has_clients(self) -> bool:
@@ -55,13 +62,28 @@ class EventBus:
         self._clients.add(websocket)
         try:
             await websocket.send(json.dumps(self._last_state))
-            await websocket.wait_closed()
+            if self._last_lesson:
+                await websocket.send(json.dumps(self._last_lesson))
+            # HUD ke Stop button jaise commands. Recitation ke dauran mic
+            # Gemini tak nahi jata, isliye awaaz se rokna mumkin nahi.
+            async for message in websocket:
+                self._command(message)
         finally:
             self._clients.discard(websocket)
+
+    def _command(self, message) -> None:
+        try:
+            name = json.loads(message).get("command")
+        except (TypeError, ValueError, AttributeError):
+            return
+        if name in self.COMMANDS and self.on_command:
+            self.on_command(name)
 
     def publish(self, event: dict) -> None:
         if event.get("type") == "state":
             self._last_state = event
+        elif event.get("type") == "panel":
+            self._last_lesson = None if event.get("payload", {}).get("mode") == "close" else event
 
         if not self._clients:
             return

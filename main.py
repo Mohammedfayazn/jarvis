@@ -1,5 +1,6 @@
 import array
 import asyncio
+import logging
 import os
 import queue
 import sys
@@ -12,8 +13,12 @@ from google.genai import types
 from websockets.exceptions import ConnectionClosed
 
 import browser_tools
+import islamic
+import projects
+import speech_coach
 import ui_server
 import window_manager
+from audio_runtime import AudioPlayer, UtteranceRecorder
 from memory import assistant as memory_assistant
 from prompts import instruction
 
@@ -22,6 +27,11 @@ if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 load_dotenv()
+
+# Tutor ke kaam ki baatein terminal me (jaise recitation me kya suna gaya);
+# baaki libraries sirf warning par bolein
+logging.basicConfig(level=logging.WARNING, format="%(message)s")
+logging.getLogger("jarvis.islamic").setLevel(logging.INFO)
 
 MODEL = "gemini-3.1-flash-live-preview"
 
@@ -67,6 +77,571 @@ _CONFIRM_TOKEN = types.Schema(
         "ke baad bhejo."
     ),
 )
+
+# Project tools ke saajhe parameters
+_PROJECT = types.Schema(
+    type=types.Type.STRING,
+    description=(
+        "Project ka naam jaisa user ne kaha ('homemade', 'jarvis'). Khali "
+        "chhodo toh abhi wala (sabse aakhri khola hua) project."
+    ),
+)
+_TEXT = lambda description: types.Schema(type=types.Type.STRING, description=description)
+
+
+def _project_tools():
+    """Project co-pilot (projects/) - declared separately, TOOLS lamba na ho."""
+    return [
+        types.FunctionDeclaration(
+            name="open_project",
+            description=(
+                "Project dhoondh kar VS Code me kholta hai, uski yaaddasht, git "
+                "history aur docs padh kar haal batata hai. 'Homemade project "
+                "kholo', 'open homemade project and resume work', 'open last "
+                "project'. Nateeje ka message chhote me sunao: kab kaam hua, "
+                "haal ki git activity, khule tasks, aur suggested next step."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "name": _TEXT("Project ka naam; 'last' = aakhri khola hua project."),
+                "mode": _TEXT(
+                    "'summary' (default: kholo + haal batao), 'resume' (+ pichhli "
+                    "baar kya kiya aur aage kya tha), ya 'open' (sirf kholo)."),
+                "open_editor": types.Schema(
+                    type=types.Type.BOOLEAN,
+                    description="VS Code kholna hai? Default true. Sirf status poochha ho toh false."),
+            }),
+        ),
+        types.FunctionDeclaration(
+            name="project_overview",
+            description=(
+                "Project ke baare me sawaalon ka jawab, stored memory + git + "
+                "docs + pichhle work sessions se. view chuno: 'status' (project "
+                "ka poora haal), 'working_on' ('main kya kar raha tha?'), "
+                "'changes' ('is hafte kya badla?' - days ke saath), 'blockers' "
+                "('kya rok raha hai?'), 'next_actions' ('ab kya karun?' - "
+                "recommendations, wajah ke saath), 'daily_summary' (sab projects "
+                "ka daily standup), 'list_projects', 'open_notes' (project notes "
+                "file VS Code me)."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "view": _TEXT("status | working_on | changes | blockers | next_actions | "
+                              "daily_summary | list_projects | open_notes"),
+                "days": types.Schema(type=types.Type.INTEGER,
+                                     description="Sirf 'changes' ke liye: aaj=1, hafta=7, mahina=30."),
+                "project": _PROJECT,
+            }, required=["view"]),
+        ),
+        types.FunctionDeclaration(
+            name="add_project_task",
+            description="Project me naya task: 'task add karo: kitchen availability screen'.",
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "title": _TEXT("Task ka chhota naam."),
+                "priority": _TEXT("High, Medium ya Low. Na bola ho toh chhod do."),
+                "description": _TEXT("Optional tafseel."),
+                "project": _PROJECT,
+            }, required=["title"]),
+        ),
+        types.FunctionDeclaration(
+            name="update_project_task",
+            description=(
+                "Task ka status/priority badalta hai: 'kitchen screen complete "
+                "ho gaya', 'payments task blocked hai', 'order workflow shuru "
+                "kiya'. needs_choice aaye toh poochho kaunsa task."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "title": _TEXT("Task ka naam ya uska hissa."),
+                "status": _TEXT("Todo, In Progress, Blocked ya Done."),
+                "priority": _TEXT("Optional: High, Medium, Low."),
+                "project": _PROJECT,
+            }, required=["title"]),
+        ),
+        types.FunctionDeclaration(
+            name="list_project_tasks",
+            description="Tasks dikhata hai: pending (default), done, blocked, in progress, ya all.",
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "status": _TEXT("pending | done | blocked | in progress | all"),
+                "project": _PROJECT,
+            }),
+        ),
+        types.FunctionDeclaration(
+            name="record_project_note",
+            description=(
+                "Project ki lambi yaaddasht me likhta hai. kind: goal, decision "
+                "(architecture/technical faisla), note (implementation note), "
+                "blocker, problem (baar baar aane wali dikkat), preference "
+                "(coding pasand). Jab main koi faisla, goal, blocker ya note "
+                "batau aur saaf ho ki project ke liye hai, tab chalao."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "kind": _TEXT("goal | decision | note | blocker | problem | preference"),
+                "text": _TEXT("Jo yaad rakhna hai, ek saaf jumle me."),
+                "scope": _TEXT("'global' sirf preference/problem ke liye jo har project par lage; "
+                               "warna chhod do."),
+                "project": _PROJECT,
+            }, required=["kind", "text"]),
+        ),
+        types.FunctionDeclaration(
+            name="recall_project_notes",
+            description=(
+                "Project ke faisle, notes, goals, blockers, problems, "
+                "preferences yaad karta hai: 'auth ke liye humne kya decide "
+                "kiya tha?', 'project goals kya hain?'. found false ho toh saaf "
+                "kaho ki record nahi hai - andaaza mat lagao."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "kind": _TEXT("Optional: goal | decision | note | blocker | problem | preference"),
+                "query": _TEXT("Optional: kis baare me, jaise 'firebase auth'."),
+                "project": _PROJECT,
+            }),
+        ),
+        types.FunctionDeclaration(
+            name="resolve_project_blocker",
+            description="Blocker hal ho gaya: 'Stripe wala blocker khatam ho gaya'.",
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "text": _TEXT("Blocker ka hissa jisse pehchana jaye."),
+                "project": _PROJECT,
+            }, required=["text"]),
+        ),
+        types.FunctionDeclaration(
+            name="end_work_session",
+            description=(
+                "Aaj ka kaam session save karta hai. Jab main kahoon kaam khatam "
+                "('aaj ke liye bas', 'done for today'), PEHLE poochho 'Aaj kya "
+                "accomplish kiya?', jawab suno, phir poochho 'Aage kya karna "
+                "hai?', jawab suno - tab dono jawab ke saath yeh chalao. Khud se "
+                "jawab mat banao."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "accomplished": _TEXT("Mere jawab ka saar: aaj kya kiya."),
+                "next_steps": _TEXT("Mere jawab ka saar: aage kya karna hai."),
+                "project": _PROJECT,
+            }, required=["accomplished"]),
+        ),
+        types.FunctionDeclaration(
+            name="project_code",
+            description=(
+                "Project ke code ke saath kaam. action: 'architecture' "
+                "(structure + docs), 'search' (query dhoondho), 'todos', 'read' "
+                "(ek file padho - explain karne ke liye; query = file ka naam, "
+                "start = line), 'module' (folder/file ka khulasa), 'health' "
+                "(refactoring, missing tests, technical debt), 'diff' (uncommitted "
+                "changes). Code sirf wahi explain karo jo nateeje me aaya."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("architecture | search | todos | read | module | health | diff"),
+                "query": _TEXT("search ka text, ya file/folder ka naam ('app router', 'auth')."),
+                "start": types.Schema(type=types.Type.INTEGER,
+                                      description="Sirf 'read': kis line se padhna hai."),
+                "project": _PROJECT,
+            }, required=["action"]),
+        ),
+    ]
+
+
+def _project_overview(a):
+    pa = projects.get_assistant()
+    view = (a.get("view") or "status").strip().lower().replace(" ", "_")
+    project = a.get("project") or None
+    views = {
+        "status": lambda: pa.project_status(project),
+        "working_on": lambda: pa.what_was_i_working_on(project),
+        "changes": lambda: pa.what_changed(int(a.get("days") or 7), project),
+        "blockers": lambda: pa.blockers(project),
+        "next_actions": lambda: pa.next_actions(project),
+        "daily_summary": pa.daily_summary,
+        "list_projects": pa.list_projects,
+        "open_notes": lambda: pa.open_notes(project),
+    }
+    if view not in views:
+        return {"ok": False, "message": f"'{view}' view nahi hai: {', '.join(views)}."}
+    return views[view]()
+
+
+# Sab blocking hain (git, disk, SQLite, VS Code launch) - thread me chalte hain
+PROJECT_TOOLS = {
+    "open_project": lambda a: projects.get_assistant().open_project(
+        a.get("name") or None, a.get("mode") or "summary",
+        a.get("open_editor", True) is not False),
+    "project_overview": _project_overview,
+    "add_project_task": lambda a: projects.get_assistant().add_task(
+        a.get("title", ""), a.get("priority"), a.get("description"),
+        project=a.get("project") or None),
+    "update_project_task": lambda a: projects.get_assistant().update_task(
+        a.get("title", ""), a.get("status"), a.get("priority"), a.get("project") or None),
+    "list_project_tasks": lambda a: projects.get_assistant().list_tasks(
+        a.get("status") or "pending", a.get("project") or None),
+    "record_project_note": lambda a: projects.get_assistant().record(
+        a.get("kind", ""), a.get("text", ""), a.get("project") or None,
+        a.get("scope") or "project"),
+    "recall_project_notes": lambda a: projects.get_assistant().recall(
+        a.get("kind"), a.get("query"), a.get("project") or None),
+    "resolve_project_blocker": lambda a: projects.get_assistant().resolve_blocker(
+        a.get("text", ""), a.get("project") or None),
+    "end_work_session": lambda a: projects.get_assistant().end_work_session(
+        a.get("accomplished"), a.get("next_steps"), a.get("project") or None),
+    "project_code": lambda a: projects.get_assistant().code(
+        a.get("action", ""), a.get("query"), a.get("project") or None, a.get("start")),
+}
+
+
+_STUDENT = _TEXT(
+    "Kaun seekh raha hai: naam ('Zunaira', 'Fayaz'), ya 'child' / 'me'. Khali "
+    "chhodo toh jo abhi seekh raha tha.")
+_SURAH = _TEXT("Surah ka naam ya number: 'Al-Ikhlas' ya '112'. Naam dena behtar hai.")
+_INT = lambda description: types.Schema(type=types.Type.INTEGER, description=description)
+
+
+def _islamic_tools():
+    """Islamic tutor (islamic/) - Quran companion aur family Quran teacher."""
+    return [
+        types.FunctionDeclaration(
+            name="islamic_sources",
+            description=(
+                "Verified Islamic sources. Quran ya hadith ka koi bhi hissa BOLNE "
+                "SE PEHLE yeh chalao - apni yaad se kabhi nahi. action: 'verse' "
+                "(surah + ayah[, to_ayah]), 'search' (Quran translation me English "
+                "word, query), 'hadith' (collection: bukhari, muslim, abudawud, "
+                "tirmidhi, nasai, ibnmajah, malik, nawawi + number), 'topic' "
+                "(manners/duas jaise 'eating', 'parents' - pehle se verified). "
+                "Nateeje me QURAN/HADITH/LESSON alag likhe hote hain - bolte waqt "
+                "bhi alag rakho, aur hadith ki grading batao."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("verse | search | hadith | topic"),
+                "query": _TEXT("search/topic ke liye."),
+                "surah": _SURAH, "ayah": _INT("Ayah number."),
+                "to_ayah": _INT("Aakhri ayah (range ke liye)."),
+                "collection": _TEXT("Hadith collection."), "number": _INT("Hadith number."),
+            }, required=["action"]),
+        ),
+        types.FunctionDeclaration(
+            name="quran_lesson",
+            description=(
+                "Quran/Islamic lesson shuru ya jaari: 'Teach Quran', 'start "
+                "child's lesson', 'Zunaira ka sabaq', 'continue yesterday's "
+                "lesson', 'next lesson'. Lesson screen par dikhta hai aur "
+                "tilawat khud chalti hai. track: alphabet (Arabic huroof), "
+                "tajweed, surah (hifz, ayah-ba-ayah), dua, manners, ya auto. "
+                "mode: continue (jahan chhoda), next (agla sabaq), repeat. "
+                "Message ka lesson apne andaaz me sikhao - bachche ke saath "
+                "chhota, pyaar se."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "student": _STUDENT,
+                "track": _TEXT("alphabet | tajweed | surah | dua | manners | auto"),
+                "mode": _TEXT("continue | next | repeat"),
+                "surah": _SURAH, "ayah": _INT("Kis ayah se (surah ke saath)."),
+            }),
+        ),
+        types.FunctionDeclaration(
+            name="lesson_done",
+            description=(
+                "Abhi ka sabaq poora hua (quiz/recitation achhi rahi, ya user ne "
+                "kaha 'ho gaya, aage chalo') - mark karke agla sabaq dikhata hai."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={"student": _STUDENT}),
+        ),
+        types.FunctionDeclaration(
+            name="play_quran",
+            description=(
+                "Quran ki tilawat chalata hai (Mishary Alafasy) aur ayaat screen "
+                "par dikhata hai: 'Surah Mulk sunao', 'ayat 3 teen baar repeat "
+                "karo'. Tilawat ke dauran main tumhe sun nahi sakta - pehle chhota "
+                "sa bata do phir chalao."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "surah": _SURAH, "from_ayah": _INT("Pehli ayah (default 1)."),
+                "to_ayah": _INT("Aakhri ayah (default: surah ka end)."),
+                "repeat": _INT("Har ayah kitni baar (1-10)."),
+            }, required=["surah"]),
+        ),
+        types.FunctionDeclaration(
+            name="stop_quran_audio",
+            description="Chal rahi tilawat rok deta hai.",
+            parameters=types.Schema(type=types.Type.OBJECT, properties={}),
+        ),
+        types.FunctionDeclaration(
+            name="test_recitation",
+            description=(
+                "Recitation/hifz test: 'Test Surah Al-Ikhlas', 'Zunaira ki surah "
+                "suno'. Mic recording shuru hoti hai; tum usi waqt ek chhoti line "
+                "bolo ('Chalo, shuru karo!') aur phir BILKUL chup raho. Jab "
+                "padhne wala ruk jayega, nateeja '[Recitation result]' ke saath "
+                "aayega - tab use pyaar se, apne shabdon me batao. show_text sirf "
+                "tab true jab padhne ki practice ho, hifz test me nahi."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "student": _STUDENT, "surah": _SURAH,
+                "from_ayah": _INT("Pehli ayah."), "to_ayah": _INT("Aakhri ayah."),
+                "show_text": types.Schema(type=types.Type.BOOLEAN,
+                                          description="Screen par ayaat dikhani hain? Default false."),
+            }),
+        ),
+        types.FunctionDeclaration(
+            name="quran_quiz",
+            description=(
+                "Bachche ka chhota quiz (huroof, agla lafz, dua, adab). Bina "
+                "answer ke = naya sawaal; bachche ka jawab mile toh answer ke "
+                "saath dobara chalao (jaisa bola: 'baa', 'number two', 'doosra'). "
+                "Result ka message pyaar se sunao."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "student": _STUDENT,
+                "answer": _TEXT("Bachche ka jawab, jaisa usne kaha."),
+                "kind": _TEXT("Optional: letter_name | letter_find | next_word | dua | manners"),
+            }),
+        ),
+        types.FunctionDeclaration(
+            name="learner",
+            description=(
+                "Seekhne walon ki profiles: action 'add' (naam, role child/parent, "
+                "bachche ki age), 'list', 'progress' (kya seekha, kya yaad hai, "
+                "kahan kamzori), 'daily_plan' ('Daily Islamic lesson' - aaj ka "
+                "Quran, dua, adab aur dohrai). Parent aur child ki progress alag."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("add | list | progress | daily_plan"),
+                "name": _TEXT("Learner ka naam (add/progress/daily_plan)."),
+                "role": _TEXT("child | parent (sirf add)."),
+                "age": _INT("Bachche ki umar (sirf add)."),
+            }, required=["action"]),
+        ),
+    ]
+
+
+_CHILD = _TEXT("Bachche ka naam ('Zunaira'). Khali chhodo toh jo abhi practice kar raha tha.")
+_LANG = _TEXT("Practice ki zubaan: en (English), nl (Dutch) ya hi (Hindi). Khali = bachche ki focus language.")
+
+
+def _coach_tools():
+    """Child speech coach (speech_coach/) - 4-6 saal ke bachche ke liye."""
+    return [
+        types.FunctionDeclaration(
+            name="speech_coach",
+            description=(
+                "Bachche ka 10-minute speech session: action 'start' (plan + greeting), "
+                "'next' (agla hissa: words, say-it-with-me, baat-cheet, kahani, sitare), "
+                "'status', 'end'. Har nateeje ka message batata hai ab kya karna hai - "
+                "wahi karo, bachche ki zubaan me, chhote khush jumlon me."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("start | next | status | end"),
+                "child": _CHILD, "language": _LANG,
+            }, required=["action"]),
+        ),
+        types.FunctionDeclaration(
+            name="coach_words",
+            description=(
+                "Vocabulary: action 'learn' (naye picture words, category: animals, food, "
+                "school, family, colors, nature), 'review' (dohrai), 'translate' (ek "
+                "lafz English/Dutch/Hindi me - text me lafz do)."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("learn | review | translate"),
+                "child": _CHILD, "language": _LANG,
+                "category": _TEXT("animals | food | school | family | colors | nature"),
+                "text": _TEXT("Sirf translate: jo lafz translate karna hai."),
+            }, required=["action"]),
+        ),
+        types.FunctionDeclaration(
+            name="practice_word",
+            description=(
+                "Bachcha ek lafz bolne ki practice kare: pehle tum lafz khush aur dheere "
+                "bolo, phir yeh chalao aur CHUP raho. Nateeja '[Word practice result]' ke "
+                "saath aayega - use pyaar se, apne shabdon me batao. Kabhi 'wrong' nahi."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "word": _TEXT("Practice ka lafz, jaise 'rabbit', 'hond', 'kutta'."),
+                "child": _CHILD, "language": _LANG,
+            }, required=["word"]),
+        ),
+        types.FunctionDeclaration(
+            name="story_time",
+            description=(
+                "Picture scene screen par dikhata hai ('What do you see?') aur batata hai "
+                "kaise ek-ek qadam se poora jumla banwana hai. scene: park, breakfast, "
+                "rain, beach, farm, school, night, birthday - ya khali (agla)."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "child": _CHILD, "language": _LANG,
+                "scene": _TEXT("Optional scene ka naam."),
+            }),
+        ),
+        types.FunctionDeclaration(
+            name="sentence_practice",
+            description=(
+                "Jab bachcha chhota jumla bole ('Dog running'), tum use bada karke bolo "
+                "('The dog is running in the park') aur yeh chalao: child_said = jo usne "
+                "kaha, bigger_sentence = tumhara bada jumla. Progress me jumlon ki "
+                "lambai ka hisaab rehta hai."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "child_said": _TEXT("Bachche ne jo kaha, bilkul waise."),
+                "bigger_sentence": _TEXT("Tumhara thoda bada, sahi jumla - usi zubaan me."),
+                "child": _CHILD, "language": _LANG,
+            }, required=["child_said"]),
+        ),
+        types.FunctionDeclaration(
+            name="child_profile",
+            description=(
+                "Bachche ki profile aur parent report: action 'add' (naam, age, "
+                "languages jaise 'nl,en,hi', focus_language), 'set_language', "
+                "'dashboard' (hafte ki report parents ke liye - naye lafz, jumlon ki "
+                "lambai, pronunciation practice, suggestions)."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("add | set_language | dashboard"),
+                "name": _TEXT("Bachche ka naam."),
+                "age": types.Schema(type=types.Type.INTEGER, description="Umar (add)."),
+                "languages": _TEXT("Comma se: 'nl,en,hi' (add)."),
+                "focus_language": _LANG,
+                "days": types.Schema(type=types.Type.INTEGER, description="Dashboard kitne din ka (default 7)."),
+            }, required=["action"]),
+        ),
+    ]
+
+
+def _coach() -> speech_coach.SpeechCoach:
+    if COACH is None:
+        raise RuntimeError("speech coach is not set up")
+    return COACH
+
+
+def _coach_words(a):
+    action = (a.get("action") or "learn").lower()
+    if action == "translate":
+        return _coach().translate(a.get("text", ""))
+    return _coach().words(a.get("child") or None, a.get("category"), a.get("language"),
+                          review=action == "review")
+
+
+def _child_profile(a):
+    action = (a.get("action") or "").lower()
+    if action == "add":
+        langs = [x.strip() for x in (a.get("languages") or "").split(",") if x.strip()] or None
+        return _coach().add_child(a.get("name", ""), a.get("age"), langs, a.get("focus_language"))
+    if action == "set_language":
+        return _coach().set_language(a.get("name") or None, a.get("focus_language", ""))
+    if action == "dashboard":
+        return _coach().parent_dashboard(a.get("name") or None, a.get("days") or 7)
+    return {"ok": False, "message": "action: add, set_language ya dashboard."}
+
+
+COACH_TOOLS = {
+    "speech_coach": lambda a: _coach().session(
+        a.get("action") or "start", a.get("child") or None, a.get("language")),
+    "coach_words": _coach_words,
+    "practice_word": lambda a: _coach().practice_word(
+        a.get("child") or None, a.get("word", ""), a.get("language")),
+    "story_time": lambda a: _coach().story(
+        a.get("child") or None, a.get("scene"), a.get("language")),
+    "sentence_practice": lambda a: _coach().sentence(
+        a.get("child") or None, a.get("child_said", ""), a.get("bigger_sentence"), a.get("language")),
+    "child_profile": _child_profile,
+}
+
+
+TUTOR: islamic.IslamicTutor | None = None
+COACH: speech_coach.SpeechCoach | None = None
+QURAN_PLAYER: AudioPlayer | None = None
+
+
+def setup_islamic_tutor(loop, bus, playback, spk_queue):
+    """Tutor ko HUD, speaker aur mic se jodna. Hooks thread-safe hain:
+    tools asyncio.to_thread me chalte hain, HUD event loop par."""
+    global TUTOR, QURAN_PLAYER
+    player = QURAN_PLAYER = AudioPlayer(is_jarvis_speaking=lambda: playback.playing or not spk_queue.empty())
+    recorder = UtteranceRecorder()
+    playback.quran_player, playback.recorder = player, recorder
+
+    def show(payload):
+        loop.call_soon_threadsafe(bus.publish, {"type": "panel", "payload": payload})
+
+    def record(on_done, child, expected_seconds):
+        # people pause to recall the next ayah - children a little longer
+        recorder.start(on_done, pause=4.0 if child else 3.0,
+                       max_seconds=min(180.0, 15.0 + expected_seconds * 2.5))
+        return True
+
+    def notify(text):
+        """Recitation ka nateeja baad me aata hai - Gemini ko text ki tarah bhejo."""
+        print(f"\U0001f54c {text}")
+
+        async def send():
+            session = playback.session
+            if session is None or not playback.connected:
+                return
+            try:
+                await session.send_realtime_input(text=text)
+            except Exception as exc:
+                print(f"\U0001f54c nateeja bhej nahi paya: {exc}")
+        asyncio.run_coroutine_threadsafe(send(), loop)
+
+    def on_command(name):
+        if name == "stop_audio":
+            player.stop()
+        elif name == "cancel_recitation":
+            recorder.cancel()
+            show({"mode": "feedback", "correct": False, "title": "Recitation cancelled",
+                  "text": "Stopped listening."})
+
+    bus.on_command = on_command
+    TUTOR = islamic.IslamicTutor(display=show, play=player.play, record=record, notify=notify)
+
+    def record_word(on_done, pause, max_seconds, no_speech):
+        recorder.start(on_done, pause=pause, max_seconds=max_seconds, no_speech=no_speech)
+        return True
+
+    global COACH
+    COACH = speech_coach.SpeechCoach(display=show, record=record_word, notify=notify)
+
+
+def _tutor() -> islamic.IslamicTutor:
+    if TUTOR is None:
+        raise RuntimeError("Islamic tutor is not set up")
+    return TUTOR
+
+
+def _learner_tool(a):
+    t = _tutor()
+    action = (a.get("action") or "").strip().lower()
+    if action == "add":
+        return t.add_learner(a.get("name", ""), a.get("role") or None, a.get("age"))
+    if action == "list":
+        return t.learners()
+    if action == "progress":
+        return t.progress(a.get("name") or None)
+    if action in ("daily_plan", "plan", "daily"):
+        return t.daily_plan(a.get("name") or None)
+    return {"ok": False, "message": "action: add, list, progress ya daily_plan."}
+
+
+def _stop_quran(_a):
+    if QURAN_PLAYER is None or not QURAN_PLAYER.busy:
+        return {"ok": True, "message": "Koi tilawat nahi chal rahi thi."}
+    QURAN_PLAYER.stop()
+    return {"ok": True, "message": "Tilawat rok di."}
+
+
+ISLAMIC_TOOLS = {
+    "islamic_sources": lambda a: _tutor().sources(
+        a.get("action", ""), a.get("query"), a.get("surah"), a.get("ayah"),
+        a.get("to_ayah"), a.get("collection"), a.get("number")),
+    "quran_lesson": lambda a: _tutor().lesson(
+        a.get("student") or None, a.get("track") or "auto", a.get("mode") or "continue",
+        a.get("surah"), a.get("ayah")),
+    "lesson_done": lambda a: _tutor().complete_lesson(a.get("student") or None),
+    "play_quran": lambda a: _tutor().play(
+        a.get("surah"), a.get("from_ayah") or 1, a.get("to_ayah"), a.get("repeat") or 1),
+    "stop_quran_audio": _stop_quran,
+    "test_recitation": lambda a: _tutor().test_recitation(
+        a.get("student") or None, a.get("surah"), a.get("from_ayah"), a.get("to_ayah"),
+        bool(a.get("show_text", False))),
+    "quran_quiz": lambda a: _tutor().quiz(
+        a.get("student") or None, a.get("answer"), a.get("kind")),
+    "learner": _learner_tool,
+}
+
 
 # Jo tools Jarvis awaaz se chala sakta hai
 TOOLS = [
@@ -389,7 +964,7 @@ TOOLS = [
                     },
                 ),
             ),
-        ]
+        ] + _project_tools() + _islamic_tools() + _coach_tools()
     )
 ]
 
@@ -435,6 +1010,11 @@ class Playback:
     def __init__(self):
         self.playing = False
         self.connected = False
+        # Islamic tutor: Quran audio player, recitation recorder, aur abhi ka
+        # session (recitation ka nateeja baad me isi par bheja jata hai)
+        self.quran_player = None
+        self.recorder = None
+        self.session = None
 
 
 def _offer(q, item):
@@ -511,8 +1091,18 @@ async def send_loop(session, mic_queue, playback):
     """Mic queue se audio uthakar Gemini ko bhejta hai."""
     while True:
         data = await mic_queue.get()
+        # Recitation test chal raha hai: awaaz sirf local speech model ko
+        # jati hai, Gemini ko nahi - taaki Jarvis bachche ko beech me na toke.
+        recorder = playback.recorder
+        if recorder is not None and recorder.active:
+            # Jarvis ki apni awaaz ("ab tum bolo: hond!") recording me na aaye -
+            # speaker se mic tak pahunch sakti hai
+            if not playback.playing:
+                recorder.feed(data)
+            continue
         # Agar speaker active hai toh mic data ignore karein (echo rokne ke liye)
-        if playback.playing:
+        # - Jarvis ki awaaz ho ya Quran ki tilawat
+        if playback.playing or (playback.quran_player and playback.quran_player.busy):
             continue
         await session.send_realtime_input(
             audio=types.Blob(data=data, mime_type="audio/pcm;rate=16000")
@@ -569,6 +1159,27 @@ async def handle_tool_call(session, tool_call, bus, sleep_event):
             print(f"\U0001fa9f {note}")
             # Model ko poora nateeja jata hai; HUD par ek line kaafi
             bus.transcript("system", note if len(note) <= 160 else note[:157] + "...")
+        elif call.name in PROJECT_TOOLS:
+            # git, disk walk, SQLite, VS Code - sab blocking, loop se bahar
+            result = await asyncio.to_thread(PROJECT_TOOLS[call.name], call.args or {})
+            note = result.get("message", "")
+            print(f"\U0001f4c1 {note}")
+            first = note.split("\n", 1)[0]
+            bus.transcript("system", first if len(first) <= 160 else first[:157] + "...")
+        elif call.name in ISLAMIC_TOOLS:
+            # Network (Quran/hadith), SQLite, audio download - loop se bahar
+            result = await asyncio.to_thread(ISLAMIC_TOOLS[call.name], call.args or {})
+            note = result.get("message", "")
+            print(f"\U0001f54c {note}")
+            first = note.split("\n", 1)[0]
+            bus.transcript("system", first if len(first) <= 160 else first[:157] + "...")
+        elif call.name in COACH_TOOLS:
+            # SQLite + (practice_word) speech model load - loop se bahar
+            result = await asyncio.to_thread(COACH_TOOLS[call.name], call.args or {})
+            note = result.get("message", "")
+            print(f"\U0001f9f8 {note}")
+            first = note.split("\n", 1)[0]
+            bus.transcript("system", first if len(first) <= 160 else first[:157] + "...")
         elif call.name in MEMORY_TOOLS:
             # SQLite hai - blocking, isliye loop se bahar
             result = await asyncio.to_thread(MEMORY_TOOLS[call.name], call.args or {})
@@ -661,6 +1272,10 @@ async def receive_loop(session, spk_queue, playback, bus, sleep_event):
                     text = " ".join(user_buf)
                     print(f"\U0001f464 User: {text}")
                     bus.transcript("user", text)
+                    if COACH is not None:
+                        # speech coach session chal raha ho toh bachche ke
+                        # jumlon ki lambai/zubaan note hoti hai
+                        COACH.observe(text)
                     user_buf.clear()
                 if model_buf:
                     text = " ".join(model_buf)
@@ -730,6 +1345,7 @@ async def session_once(
     async with client.aio.live.connect(model=MODEL, config=config) as session:
         print("Connected! Bolna shuru karein (Ctrl+C se band karein)\n")
         playback.connected = True
+        playback.session = session
         bus.state("listening")
 
         # Purana audio phenk dein - reconnect ke baad stale chunks bhejne ka
@@ -813,6 +1429,7 @@ async def run():
     # HUD pehle uthta hai taaki connect hone ka intezaar screen par dikhe
     bus = ui_server.EventBus()
     await ui_server.start(bus)
+    setup_islamic_tutor(loop, bus, playback, spk_queue)
 
     mic_thread = threading.Thread(
         target=mic_worker,
@@ -838,7 +1455,8 @@ async def run():
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Laomedeia")
             )
         ),
-        system_instruction=types.Content(parts=[types.Part(text=instruction)]),
+        system_instruction=types.Content(parts=[types.Part(
+            text=instruction + "\n\n" + islamic.ANSWER_POLICY)]),
         input_audio_transcription=types.AudioTranscriptionConfig(),
         output_audio_transcription=types.AudioTranscriptionConfig(),
         tools=TOOLS,
@@ -867,6 +1485,11 @@ async def run():
                         break
 
                     print("\n\U0001f4a4 Jarvis so gaya. Jagane ke liye bolo: 'Hey Jarvis'")
+                    # Sote hue na tilawat chale, na koi recitation test sunta rahe
+                    if playback.quran_player:
+                        playback.quran_player.stop()
+                    if playback.recorder:
+                        playback.recorder.cancel()
                     bus.state("sleeping")
                     await wait_for_wake_word(mic_queue, wake)
                     print("\n\U0001f44b 'Hey Jarvis' suna - jaag raha hoon!")

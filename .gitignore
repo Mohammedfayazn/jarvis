@@ -8,3 +8,12 @@ memory/data/
 *.db
 *.db-wal
 *.db-shm
+
+# Project co-pilot memory and generated notes
+projects/data/
+
+# Islamic tutor - family learning progress and cached recitation audio
+islamic/data/
+
+# Child speech coach - a child's practice history, never commit
+speech_coach/data/
