@@ -11,6 +11,7 @@ import threading
 import pyaudio
 from dotenv import load_dotenv
 from google import genai
+from google.genai import errors as genai_errors
 from google.genai import types
 from websockets.exceptions import ConnectionClosed
 
@@ -74,6 +75,12 @@ SPK_QUEUE_MAX = 400   # Gemini ke chunks bade hote hain
 # Reconnect backoff
 RECONNECT_MAX_DELAY = 30
 STABLE_SECONDS = 30   # Itni der chala toh backoff reset kar do
+
+
+class SessionExpiring(Exception):
+    """Server ka GoAway - session ki time limit aa gayi. Khud band karke
+    resume handle ke saath dobara judna hai, warna server 1008 se kaat deta
+    hai."""
 
 # HUD ko har 20ms wala level bhejna bekaar hai - har teesra chunk kaafi hai
 LEVEL_EVERY = 3
@@ -1260,6 +1267,9 @@ async def receive_loop(session, spk_queue, playback, bus, sleep_event):
             if update and update.resumable and update.new_handle:
                 playback.resume_handle = update.new_handle
 
+            if response.go_away:
+                raise SessionExpiring(response.go_away.time_left)
+
             # Tool call alag rasta hai - iske saath server_content nahi aata
             if response.tool_call:
                 if await handle_tool_call(
@@ -1560,8 +1570,14 @@ async def run(start_asleep: bool = False, open_browser: bool = True):
                     delay = 1
                     continue
                 print("\nSession khatam ho gaya.")
+            except SessionExpiring:
+                # Lambi session ke baad backoff 1s hi hai; resume handle se
+                # baatcheet wahin se chalegi
+                print("\nSession ki time limit - wahi baatcheet naye connection par...")
             except ConnectionClosed as exc:
                 print(f"\nConnection tut gaya: {exc.__class__.__name__}")
+            except genai_errors.APIError as exc:
+                print(f"\nGemini ne connection band kiya: {exc.code} {exc.message}")
             except (TimeoutError, OSError) as exc:
                 print(f"\nNetwork problem: {exc.__class__.__name__}: {exc}")
 
