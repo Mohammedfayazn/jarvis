@@ -88,12 +88,16 @@ class SpeechCoach:
                           "age and languages, then add the profile."}
         key = " ".join((name or "").lower().replace("'s", "").split())
         if key and key not in ("child", "my child", "kid", "daughter", "beti", "the child", "her"):
-            child = self.tracker.get_child(key)
-            if child is None:
+            # "Zunaira" finds "Zunaira Fatima": the name is spoken, not typed
+            found = self.tracker.find_children(key)
+            if len(found) > 1:
+                return None, {"ok": False, "needs_choice": True,
+                              "message": "Which one? " + ", ".join(c.name for c in found)}
+            if not found:
                 return None, {"ok": False, "needs_profile": True,
                               "message": f"No profile for {name} yet - add one first."}
-            self._active_child = child.id
-            return child, None
+            self._active_child = found[0].id
+            return found[0], None
         if self._active_child:
             child = next((c for c in children if c.id == self._active_child), None)
             if child:

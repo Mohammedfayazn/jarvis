@@ -47,6 +47,25 @@ class Student:
         return dataclasses.asdict(self)
 
 
+def match_name(spoken: str, stored: str) -> bool:
+    """Does a spoken name mean this stored name?
+
+    Case doesn't matter ("zunaira" is "Zunaira"), and a first name finds the
+    full one ("Zunaira" -> "Zunaira Fatima"): Jarvis lowercases what it
+    heard, and people say one name where the profile has two. An exact
+    match is preferred by the callers below, so a real "Ali" is never
+    mistaken for "Ali Hassan" when both exist.
+    """
+    said = " ".join((spoken or "").casefold().split())
+    have = " ".join((stored or "").casefold().split())
+    if not said or not have:
+        return False
+    if said == have:
+        return True
+    have_words = have.split()
+    return all(word in have_words for word in said.split())
+
+
 class LearningTracker:
     def __init__(self, conn: sqlite3.Connection):
         self._conn = conn
@@ -80,10 +99,17 @@ class LearningTracker:
         return Student(**dict(row)) if row else None
 
     def get_student(self, name: str) -> Student | None:
-        row = self._conn.execute(
-            "SELECT * FROM students WHERE name = ?", (" ".join((name or "").split()),)
-        ).fetchone()
-        return Student(**dict(row)) if row else None
+        """The one learner that name means, or None (none, or more than one)."""
+        found = self.find_students(name)
+        return found[0] if len(found) == 1 else None
+
+    def find_students(self, name: str) -> list[Student]:
+        """Every learner a spoken name could mean - exact match wins."""
+        students = self.students()
+        said = " ".join((name or "").casefold().split())
+        exact = [s for s in students
+                 if " ".join(s.name.casefold().split()) == said]
+        return exact or [s for s in students if match_name(name, s.name)]
 
     def students(self) -> list[Student]:
         rows = self._conn.execute(

@@ -41,6 +41,25 @@ class Child:
         return data
 
 
+def match_name(spoken: str, stored: str) -> bool:
+    """Does a spoken name mean this stored name?
+
+    Case doesn't matter ("zunaira" is "Zunaira"), and a first name finds the
+    full one ("Zunaira" -> "Zunaira Fatima"): Jarvis lowercases what it
+    heard, and people say one name where the profile has two. An exact
+    match is preferred by the callers below, so a real "Ali" is never
+    mistaken for "Ali Hassan" when both exist.
+    """
+    said = " ".join((spoken or "").casefold().split())
+    have = " ".join((stored or "").casefold().split())
+    if not said or not have:
+        return False
+    if said == have:
+        return True
+    have_words = have.split()
+    return all(word in have_words for word in said.split())
+
+
 class ProgressTracker:
     def __init__(self, conn: sqlite3.Connection):
         self._conn = conn
@@ -67,9 +86,17 @@ class ProgressTracker:
         return Child.from_row(row) if row else None
 
     def get_child(self, name: str) -> Child | None:
-        row = self._conn.execute("SELECT * FROM children WHERE name = ?",
-                                 (" ".join((name or "").split()),)).fetchone()
-        return Child.from_row(row) if row else None
+        """The one child that name means, or None (none, or more than one)."""
+        found = self.find_children(name)
+        return found[0] if len(found) == 1 else None
+
+    def find_children(self, name: str) -> list[Child]:
+        """Every child a spoken name could mean - exact match wins."""
+        children = self.children()
+        exact = [c for c in children if match_name(name, c.name)
+                 and " ".join((name or "").casefold().split())
+                 == " ".join(c.name.casefold().split())]
+        return exact or [c for c in children if match_name(name, c.name)]
 
     def children(self) -> list[Child]:
         return [Child.from_row(r) for r in self._conn.execute("SELECT * FROM children ORDER BY id")]

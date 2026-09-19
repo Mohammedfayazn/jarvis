@@ -94,9 +94,13 @@ class IslamicTutor:
             return None, {"ok": False, "needs_choice": True,
                           "message": "Which of you? " + ", ".join(p.name for p in parents)}
         if key:
-            student = self.tracker.get_student(key)
-            if student:
-                return self._use(student), None
+            # "fayaz" finds "Fayaz", "Zunaira" finds "Zunaira Fatima"
+            found = self.tracker.find_students(key)
+            if len(found) > 1:
+                return None, {"ok": False, "needs_choice": True,
+                              "message": "Which one? " + ", ".join(s.name for s in found)}
+            if found:
+                return self._use(found[0]), None
             return None, {"ok": False, "needs_profile": True, "message":
                           f"I don't have a profile for {name}. Should I add them? Tell me if "
                           "they're a child (and their age) or a parent."}
