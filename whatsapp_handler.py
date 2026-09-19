@@ -1090,11 +1090,30 @@ class WhatsAppManager:
         composer = self._wait_for(SEL_COMPOSER, 10)
         if composer is None:
             raise WhatsAppError("send_failed", f"The chat with {name} didn't open.")
-        header = self._chat_title()
-        if header and _norm_name(header) != _norm_name(name):
-            raise WhatsAppError(
-                "send_failed", f"Opened '{header}' instead of '{name}', so I didn't send anything.")
+        self._verify_chat(name, composer)
         return name
+
+    def _verify_chat(self, name: str, composer) -> None:
+        """Make sure the chat that opened is the one that was clicked.
+
+        The compose box names its recipient ("Type a message to Rahul"),
+        which is what counts - that is where the text goes. The header is
+        only a fallback: WhatsApp relabels it for some chats (your own chat
+        reads "Message yourself" while the list shows your number), and
+        refusing to send over that was wrong.
+        """
+        wanted = _norm_name(name)
+        label = clean_text(composer.get_attribute("aria-label") or "")
+        if label:
+            if wanted and wanted in _norm_name(label):
+                return
+            raise WhatsAppError(
+                "send_failed",
+                f"The message box says '{label}', not {name} - I didn't send anything.")
+        header = self._chat_title()
+        if header and _norm_name(header) != wanted:
+            log.info("WhatsApp: header '%s' differs from the chat '%s' that was opened",
+                     header, name)
 
     def _chat_title(self) -> str:
         el = self._first(SEL_CHAT_HEADER)
@@ -1112,31 +1131,67 @@ class WhatsAppManager:
             self._page.wait_for_timeout(250)
         return None
 
+    def _focus_composer(self, composer) -> bool:
+        """Put the cursor in the compose box - and be sure it went there.
+
+        Clicking isn't enough on its own: with the search results still
+        open, the click can land on the overlay and every keystroke then
+        goes to the search box, leaving the message box empty.
+        """
+        page = self._page
+        for attempt in range(3):
+            if attempt:
+                page.keyboard.press("Escape")      # drop a search overlay
+                page.wait_for_timeout(200)
+            composer.click()
+            page.wait_for_timeout(150)
+            if composer.evaluate(
+                "el => el === document.activeElement || el.contains(document.activeElement)"
+            ):
+                return True
+            log.info("WhatsApp: message box didn't take the cursor (try %d)", attempt + 1)
+        return False
+
     def _type_message(self, text: str) -> None:
-        """Put `text` in the compose box and verify it arrived intact."""
+        """Put `text` in the compose box and verify it arrived intact.
+
+        Typing is retried once: a lost click or a half-cleared draft is
+        worth another go. Only a real difference - text that would be sent
+        mangled - stops the send.
+        """
         page = self._page
         composer = self._wait_for(SEL_COMPOSER, 10)
         if composer is None:
             raise WhatsAppError("send_failed", "Couldn't find the message box.")
-        composer.click()
-        # A draft may already be there - replace it
-        page.keyboard.press("Control+A")
-        page.keyboard.press("Backspace")
-        for i, line in enumerate(text.split("\n")):
-            if i:
-                page.keyboard.press("Shift+Enter")   # Enter alone would send
-            if line:
-                page.keyboard.insert_text(line)
-        page.wait_for_timeout(300)
 
-        typed = composer.evaluate(_ELEMENT_TEXT_JS)
-        if letters_only(typed) != letters_only(text):
+        typed = ""
+        for attempt in range(2):
+            if not self._focus_composer(composer):
+                raise WhatsAppError(
+                    "send_failed", "I couldn't get into WhatsApp's message box.")
+            # A draft may already be there - replace it
             page.keyboard.press("Control+A")
             page.keyboard.press("Backspace")
-            log.warning("WhatsApp compose box text differs from the message; not sent")
-            raise WhatsAppError(
-                "text_mismatch",
-                "The message didn't come out right in WhatsApp, so I didn't send it.")
+            page.wait_for_timeout(100)
+            for i, line in enumerate(text.split("\n")):
+                if i:
+                    page.keyboard.press("Shift+Enter")   # Enter alone would send
+                if line:
+                    page.keyboard.insert_text(line)
+            page.wait_for_timeout(300)
+
+            typed = composer.evaluate(_ELEMENT_TEXT_JS)
+            if letters_only(typed) == letters_only(text):
+                return
+            log.info("WhatsApp: message box has %r, expected %r - retrying",
+                     typed[:80], text[:80])
+            page.keyboard.press("Control+A")
+            page.keyboard.press("Backspace")
+
+        log.warning("WhatsApp compose box text still differs from the message; not sent")
+        raise WhatsAppError(
+            "text_mismatch",
+            "The message didn't come out right in WhatsApp, so I didn't send it.")
 
     def _click_send(self) -> None:
         button = self._wait_for(SEL_SEND, 5)
