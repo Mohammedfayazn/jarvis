@@ -11,11 +11,14 @@ stay next to the code; PyInstaller copies them into the build.
 """
 from __future__ import annotations
 
+import logging
 import os
 import shutil
 import sys
 import uuid
 from pathlib import Path
+
+log = logging.getLogger("jarvis.data")
 
 FROZEN = getattr(sys, "frozen", False)
 CODE_DIR = Path(__file__).resolve().parent
@@ -44,7 +47,10 @@ def log_file() -> Path:
     return home() / "jarvis.log"
 
 
-def redirected_home() -> Path | None:
+_REDIRECT: Path | None | str = "unknown"
+
+
+def redirected_home(recheck: bool = False) -> Path | None:
     """Where writes to home() really end up, if Windows redirects them.
 
     A program started from a packaged (MSIX) Windows app - e.g. a terminal
@@ -53,6 +59,10 @@ def redirected_home() -> Path | None:
     so everything looks fine, but Jarvis started from the Desktop never sees
     them. Returns that private folder, or None when writes are real.
     """
+    global _REDIRECT
+    if _REDIRECT != "unknown" and not recheck:
+        return _REDIRECT
+    _REDIRECT = None
     base = os.environ.get("LOCALAPPDATA")
     if not base or os.environ.get("JARVIS_HOME"):
         return None
@@ -69,10 +79,41 @@ def redirected_home() -> Path | None:
     try:
         for private in packages.glob("*/LocalCache/Local/" + target.name):
             if (private / probe.name).exists():
+                _REDIRECT = private
                 return private
         return None
     finally:
         probe.unlink(missing_ok=True)
+
+_warned = False
+
+
+def warn_if_redirected(db_path) -> Path | None:
+    """Shout before a redirected process opens Jarvis's live data.
+
+    Opening one of these databases read-WRITE from such a process is not
+    harmless: SQLite folds the write-ahead log into the database file, the
+    result lands in the private copy, and the real file is left with a
+    stranded log - which looks exactly like "my profiles are gone". That
+    happened once; this is so it can never be silent again.
+    """
+    global _warned
+    path = Path(str(db_path))
+    if str(db_path) == ":memory:" or home() not in path.parents:
+        return None
+    private = redirected_home()
+    if private is None:
+        return None
+    if not _warned:
+        _warned = True
+        log.warning(
+            "This process's AppData writes are redirected to %s - it was started from "
+            "a packaged app (the Claude desktop app, for one). Opening %s here writes "
+            "to that private copy, and the Jarvis started from the Desktop will not "
+            "see it. From there, open these databases read-only "
+            "(sqlite3 'file:...?mode=ro') or run outside that app.",
+            private, path.name)
+    return private
 
 
 def migrate_legacy_data(source_root: Path = CODE_DIR) -> list[str]:

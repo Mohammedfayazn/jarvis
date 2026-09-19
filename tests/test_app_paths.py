@@ -50,3 +50,27 @@ class AppPathsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RedirectGuardTest(unittest.TestCase):
+    """A process whose AppData writes are redirected must not silently open
+    Jarvis's live databases: that is how the profiles went missing once."""
+
+    def test_warns_once_for_a_live_database(self):
+        import logging
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp) / "Jarvis"
+            (home / "speech_coach").mkdir(parents=True)
+            with mock.patch.dict(os.environ, {"JARVIS_HOME": str(home)}):
+                app_paths._warned = False
+                app_paths._REDIRECT = Path(tmp) / "Packages" / "App" / "LocalCache"
+                db = home / "speech_coach" / "speech_coach.db"
+                with self.assertLogs("jarvis.data", level=logging.WARNING) as logs:
+                    self.assertIsNotNone(app_paths.warn_if_redirected(db))
+                self.assertIn("redirected", logs.output[0])
+                # only the first open shouts
+                app_paths.warn_if_redirected(db)
+                self.assertIsNone(app_paths.warn_if_redirected(":memory:"))
+                self.assertIsNone(app_paths.warn_if_redirected(Path(tmp) / "elsewhere.db"))
+            app_paths._REDIRECT = "unknown"
+            app_paths._warned = False
