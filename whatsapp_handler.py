@@ -8,14 +8,21 @@ WhatsApp Web, driven by Playwright.
 * `WhatsAppManager.summarize_and_prompt_reply(filter_mode)` - the same, as
   one sentence Jarvis can speak, plus the structured list.
 
-One-time setup (the QR code is scanned once, never again):
+One-time setup (the QR code is scanned once, never again): tell Jarvis
+"WhatsApp link karo", or run
 
     python whatsapp_handler.py login
 
-That opens a visible Chrome window with its own profile in
+Either opens a visible Chrome window with its own profile in
 %LOCALAPPDATA%\\Jarvis\\whatsapp\\profile. Scan the QR code with WhatsApp on
 your phone (Settings > Linked devices). The session lives in that profile,
 so every later start - headless, inside Jarvis - is already logged in.
+
+Linking by voice is the safe way: the login is saved by Jarvis itself, in
+the folder Jarvis reads. A terminal opened from a packaged Windows app
+(the Claude desktop app, for one) has its AppData writes redirected to
+that app's private copy - see `app_paths.redirected_home` - so `login`
+refuses to run there.
 
 Design notes:
 
@@ -145,7 +152,7 @@ _DATE_RE = re.compile(r"^\d{1,4}[/.\-]\d{1,2}[/.\-]\d{1,4}$")
 class WhatsAppError(Exception):
     """A failure with a status Jarvis can act on.
 
-    status: not_set_up, not_logged_in, offline, timeout, not_found,
+    status: not_set_up, not_logged_in, login_open, offline, timeout, not_found,
     ambiguous, invalid_number, empty_message, text_mismatch, send_failed,
     browser_error.
     """
@@ -578,6 +585,8 @@ class WhatsAppManager:
         self.headless = headless
         self._channel = channel or os.environ.get("JARVIS_WHATSAPP_CHANNEL")
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="whatsapp")
+        self._headless_default = headless
+        self._login_future = None
         self._pw = None
         self._ctx = None
         self._page = None
@@ -654,8 +663,28 @@ class WhatsAppManager:
 
     def login(self, timeout: float = 180) -> dict:
         """Open a visible window and wait for the QR code to be scanned."""
-        self.headless = False
         return self._call(self._login, timeout, timeout=timeout + 60)
+
+    def start_login(self, timeout: float = 180) -> dict:
+        """Open the QR window and return at once - for Jarvis, which can't
+        sit in a tool call for minutes. Other calls answer login_open until
+        the code is scanned or `timeout` runs out."""
+        if self._login_open():
+            return {"ok": True, "status": "login_open",
+                    "message": "The WhatsApp login window is already open. Scan the QR code in it."}
+        self._login_future = self._executor.submit(self._guarded, self._login, timeout)
+        return {
+            "ok": True,
+            "status": "login_open",
+            "message": (
+                "I've opened a WhatsApp window on your screen. On your phone open WhatsApp, "
+                "go to Settings, Linked devices, Link a device, and scan the QR code. "
+                f"You have {round(timeout / 60)} minutes. Tell me when it's done."
+            ),
+        }
+
+    def _login_open(self) -> bool:
+        return self._login_future is not None and not self._login_future.done()
 
     def warm_up(self) -> None:
         """Start the browser in the background so the first request is fast."""
@@ -672,6 +701,9 @@ class WhatsAppManager:
     # ---- worker-thread plumbing ----
 
     def _call(self, fn, *args, timeout: float = CALL_TIMEOUT):
+        if self._login_open():
+            raise WhatsAppError(
+                "login_open", "The WhatsApp login window is still open - scan the QR code first.")
         future = self._executor.submit(self._guarded, fn, *args)
         try:
             return future.result(timeout=timeout)
@@ -844,8 +876,8 @@ class WhatsAppManager:
             self._mark_linked(False)
             raise WhatsAppError(
                 "not_logged_in",
-                "WhatsApp isn't linked to Jarvis yet. Run 'python whatsapp_handler.py "
-                "login' once and scan the QR code with your phone.",
+                "WhatsApp isn't linked to Jarvis yet. I can open the login window so you "
+                "can scan the QR code with your phone - just say 'link WhatsApp'.",
             )
         if not page.evaluate("navigator.onLine"):
             raise WhatsAppError("offline", "The computer seems to be offline.")
@@ -876,23 +908,29 @@ class WhatsAppManager:
         return {"ok": True, "status": "ready", "message": "WhatsApp is connected."}
 
     def _login(self, timeout: float) -> dict:
-        if self._alive():
-            self._shutdown()          # it may be headless - reopen visibly
-        self._launch()
-        page = self._page
-        page.goto(WHATSAPP_URL, wait_until="domcontentloaded")
-        print("Scan the QR code in the browser window with WhatsApp on your phone "
-              "(Settings > Linked devices > Link a device).")
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            if self._page_state() == "ready":
-                self._mark_linked(True)
-                # Give the first sync a moment to write the session to disk
-                page.wait_for_timeout(8000)
-                return {"ok": True, "status": "ready",
-                        "message": f"WhatsApp is linked. Session saved in {self.profile_dir}."}
-            page.wait_for_timeout(1000)
-        raise WhatsAppError("timeout", "The QR code wasn't scanned in time. Run login again.")
+        """Visible window until the QR code is scanned, then back to headless."""
+        self._shutdown()              # it may be headless - reopen visibly
+        self.headless = False
+        try:
+            self._launch()
+            page = self._page
+            page.goto(WHATSAPP_URL, wait_until="domcontentloaded")
+            log.info("WhatsApp login window open - waiting for the QR code to be scanned")
+            deadline = time.monotonic() + timeout
+            while time.monotonic() < deadline:
+                if self._page_state() == "ready":
+                    self._mark_linked(True)
+                    # Give the first sync a moment to write the session to disk
+                    page.wait_for_timeout(8000)
+                    log.info("WhatsApp linked - session saved in %s", self.profile_dir)
+                    return {"ok": True, "status": "ready",
+                            "message": f"WhatsApp is linked. Session saved in {self.profile_dir}."}
+                page.wait_for_timeout(1000)
+            raise WhatsAppError("timeout", "The QR code wasn't scanned in time. Try linking again.")
+        finally:
+            # Close the visible window; the next request reopens headless
+            self._shutdown()
+            self.headless = self._headless_default
 
     # ---- reading ----
 
@@ -1243,7 +1281,16 @@ def send_whatsapp_tool(args: dict) -> dict:
     }
 
 
+def link_whatsapp_tool(_args: dict) -> dict:
+    """Voice tool: open the QR login window from inside Jarvis."""
+    try:
+        return manager().start_login()
+    except WhatsAppError as exc:
+        return exc.as_result()
+
+
 VOICE_TOOLS = {
+    "link_whatsapp": link_whatsapp_tool,
     "check_whatsapp": check_whatsapp_tool,
     "send_whatsapp": send_whatsapp_tool,
 }
@@ -1273,9 +1320,23 @@ def _cli(argv=None) -> int:
     send.add_argument("--yes", action="store_true", help="don't ask before sending")
     args = parser.parse_args(argv)
 
+    if args.command == "login":
+        private = app_paths.redirected_home()
+        if private is not None:
+            print(
+                "Not linking from here: Windows redirects this terminal's AppData writes to\n"
+                f"  {private}\n"
+                "(it was started from a packaged app, like the Claude desktop app), so the\n"
+                "Jarvis you start from the Desktop would never see the login.\n"
+                "Ask Jarvis instead: 'WhatsApp link karo' - or run this from a normal\n"
+                "Windows terminal (Start menu > Terminal)."
+            )
+            return 2
     wa = WhatsAppManager(headless=not args.show)
     try:
         if args.command == "login":
+            print("Scan the QR code in the browser window with WhatsApp on your phone "
+                  "(Settings > Linked devices > Link a device).")
             result = wa.login(args.timeout)
         elif args.command == "status":
             result = wa.status()

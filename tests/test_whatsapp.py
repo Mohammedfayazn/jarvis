@@ -264,5 +264,57 @@ class SendToolTest(unittest.TestCase):
                          "empty_message")
 
 
+class LoginWindowTest(unittest.TestCase):
+    def test_other_calls_wait_while_the_qr_window_is_open(self):
+        from concurrent.futures import Future
+        m = wa.WhatsAppManager(profile_dir=Path("unused"), headless=True)
+        m._login_future = Future()             # scan still pending
+        with self.assertRaises(WhatsAppError) as ctx:
+            m.get_unread_messages("unread")
+        self.assertEqual(ctx.exception.status, "login_open")
+        self.assertEqual(m.start_login()["status"], "login_open")   # no second window
+        m._login_future.set_result({"ok": True})
+        self.assertFalse(m._login_open())
+        m._executor.shutdown(wait=False)
+
+    def test_not_linked_message_offers_voice_linking(self):
+        m = wa.WhatsAppManager(profile_dir=Path("unused"), headless=True)
+        m._alive = lambda: True
+        m._page = type("P", (), {"url": wa.WHATSAPP_URL,
+                                 "wait_for_timeout": lambda self, ms: None,
+                                 "evaluate": lambda self, js: True})()
+        m._page_state = lambda: "qr"
+        m._mark_linked = lambda linked: None
+        with self.assertRaises(WhatsAppError) as ctx:
+            m._ready(timeout=1)
+        self.assertEqual(ctx.exception.status, "not_logged_in")
+        self.assertIn("link WhatsApp", ctx.exception.message)
+        self.assertNotIn("python", ctx.exception.message)
+        m._executor.shutdown(wait=False)
+
+
+class RedirectedHomeTest(unittest.TestCase):
+    def test_plain_folder_is_not_redirected(self):
+        import os
+        import tempfile
+        import app_paths
+        with tempfile.TemporaryDirectory() as tmp:
+            old = {k: os.environ.get(k) for k in ("LOCALAPPDATA", "JARVIS_HOME")}
+            try:
+                os.environ.pop("JARVIS_HOME", None)
+                os.environ["LOCALAPPDATA"] = tmp
+                (Path(tmp) / "Packages" / "Some.App" / "LocalCache" / "Local" / "Jarvis").mkdir(parents=True)
+                self.assertIsNone(app_paths.redirected_home())
+                self.assertEqual(list((Path(tmp) / "Jarvis").iterdir()), [])   # probe removed
+                os.environ["JARVIS_HOME"] = tmp        # explicit home: never checked
+                self.assertIsNone(app_paths.redirected_home())
+            finally:
+                for k, v in old.items():
+                    if v is None:
+                        os.environ.pop(k, None)
+                    else:
+                        os.environ[k] = v
+
+
 if __name__ == "__main__":
     unittest.main()

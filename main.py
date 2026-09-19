@@ -571,6 +571,15 @@ def _whatsapp_tools():
                 "confirm_token": _CONFIRM_TOKEN,
             }, required=["recipient", "message"]),
         ),
+        types.FunctionDeclaration(
+            name="link_whatsapp",
+            description=(
+                "WhatsApp ko Jarvis se jodo: screen par QR code wali window kholta hai aur "
+                "turant lautta hai. Tab chalao jab user kahe 'WhatsApp link karo', ya jab "
+                "koi WhatsApp tool not_logged_in de aur user haan kahe."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={}),
+        ),
     ]
 
 
@@ -1770,6 +1779,11 @@ def self_test() -> int:
         driver = Path(playwright.__file__).parent / "driver"
         if not driver.is_dir():
             raise FileNotFoundError(driver)
+        private = app_paths.redirected_home()
+        if private is not None:
+            # Not a failure of the build - but this run's data isn't the real data
+            return (f"- NOTE: this run's AppData writes are redirected to {private}; "
+                    "results here may differ from Jarvis started from the Desktop")
         return "linked" if whatsapp_handler.is_set_up() else "not linked yet"
     check("WhatsApp (Playwright driver)", whatsapp)
 

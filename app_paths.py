@@ -14,6 +14,7 @@ from __future__ import annotations
 import os
 import shutil
 import sys
+import uuid
 from pathlib import Path
 
 FROZEN = getattr(sys, "frozen", False)
@@ -41,6 +42,37 @@ def env_file() -> Path:
 
 def log_file() -> Path:
     return home() / "jarvis.log"
+
+
+def redirected_home() -> Path | None:
+    """Where writes to home() really end up, if Windows redirects them.
+
+    A program started from a packaged (MSIX) Windows app - e.g. a terminal
+    inside the Claude desktop app - has its AppData writes silently moved to
+    %LOCALAPPDATA%\\Packages\\<app>\\LocalCache. It still reads them back,
+    so everything looks fine, but Jarvis started from the Desktop never sees
+    them. Returns that private folder, or None when writes are real.
+    """
+    base = os.environ.get("LOCALAPPDATA")
+    if not base or os.environ.get("JARVIS_HOME"):
+        return None
+    packages = Path(base) / "Packages"
+    if not packages.is_dir():
+        return None
+    target = home()
+    try:
+        target.mkdir(parents=True, exist_ok=True)
+        probe = target / f".write-probe-{uuid.uuid4().hex}"
+        probe.touch()
+    except OSError:
+        return None
+    try:
+        for private in packages.glob("*/LocalCache/Local/" + target.name):
+            if (private / probe.name).exists():
+                return private
+        return None
+    finally:
+        probe.unlink(missing_ok=True)
 
 
 def migrate_legacy_data(source_root: Path = CODE_DIR) -> list[str]:

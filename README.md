@@ -327,19 +327,27 @@ Zunaira doing this week?".
 Chrome that has its own profile (`%LOCALAPPDATA%\Jarvis\whatsapp\profile`),
 so the QR code is scanned once and never again.
 
-**One-time setup**
+**One-time setup:** say **"WhatsApp link karo"**. Jarvis opens a Chrome
+window with a QR code; scan it with WhatsApp on your phone (Settings >
+Linked devices > Link a device). The window closes by itself, and from
+then on Jarvis opens WhatsApp Web in the background whenever it starts.
+It uses the Chrome (or Edge) already installed, so `playwright install`
+isn't needed.
 
-```bash
-pip install playwright
-python whatsapp_handler.py login
-```
+WhatsApp Web open in your own browser doesn't count: Jarvis has its own
+linked session, separate from your browser's.
 
-`login` opens a visible Chrome window: scan the QR code with WhatsApp on
-your phone (Settings > Linked devices > Link a device) and wait until the
-chats appear. It uses the Chrome (or Edge) already installed, so
-`playwright install` isn't needed. Stop Jarvis first - a profile can only
-be open in one browser at a time. After that, Jarvis opens WhatsApp Web in
-the background whenever it starts.
+`python whatsapp_handler.py login` does the same from a terminal (stop
+Jarvis first - a profile can only be open in one browser at a time).
+
+**Troubleshooting: "WhatsApp isn't linked" although you linked it.** A
+terminal opened from a packaged Windows app - the terminal inside the
+Claude desktop app, for one - doesn't write to the real
+`%LOCALAPPDATA%`: Windows silently redirects its writes to
+`%LOCALAPPDATA%\Packages\<app>\LocalCache`. The login lands there, that
+terminal happily reads it back, and the Jarvis you start from the Desktop
+never sees it. `login` now detects this (`app_paths.redirected_home`) and
+refuses; link by voice instead, or from Start menu > Terminal.
 
 ```
 WhatsAppManager
@@ -349,6 +357,7 @@ WhatsAppManager
 voice tools (main.py)
   check_whatsapp                         -> summarize_and_prompt_reply
   send_whatsapp                          -> find chat, confirm, send_message
+  link_whatsapp                          -> start_login (QR window, returns at once)
 ```
 
 * **Reading never opens a chat**, so nothing is marked as read. It sees the
