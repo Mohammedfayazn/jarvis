@@ -47,6 +47,7 @@ exe = EXE(
     [],
     exclude_binaries=True,
     name="Jarvis",
+    icon="assets/jarvis.ico",           # also the Desktop shortcut's icon
     console=False,                         # windowless; output goes to the log file
     upx=False,                             # UPX-packed exes trip antivirus heuristics
     disable_windowed_traceback=False,
