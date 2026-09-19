@@ -6,7 +6,9 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-DATA_DIR = Path(__file__).with_name("data")
+import app_paths
+
+DATA_DIR = app_paths.data_dir("speech_coach")
 DEFAULT_DB_PATH = DATA_DIR / "speech_coach.db"
 
 SCHEMA = """

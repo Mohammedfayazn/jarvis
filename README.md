@@ -41,6 +41,30 @@ Window control needs Windows (it uses the Win32 API).
 python main.py
 ```
 
+## Run as a Windows app (no console, starts at logon)
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\build_exe.ps1               # build dist\Jarvis\Jarvis.exe + self-test
+powershell -ExecutionPolicy Bypass -File scripts\create_desktop_shortcut.ps1 # Desktop shortcut
+powershell -ExecutionPolicy Bypass -File scripts\install_startup.ps1         # start at logon (-Remove to undo)
+powershell -ExecutionPolicy Bypass -File scripts\stop_jarvis.ps1             # stop the background app
+```
+
+* It's a **folder** build (`dist\Jarvis\Jarvis.exe` plus its files), not a
+  single exe: the speech models need PyTorch (~570 MB), which a one-file exe
+  would unpack to a temp folder on every start.
+* **At logon Jarvis starts asleep**: only the offline "Hey Jarvis" detector
+  listens, nothing goes to Google until you say it, and no browser tab
+  opens. The HUD is at http://127.0.0.1:8765/ whenever you want it; the
+  Desktop shortcut opens it (and never starts a second Jarvis).
+* **Data and settings** live in `%LOCALAPPDATA%\Jarvis\`: the `.env` with
+  your API key, all databases, and `jarvis.log` (where the windowless app
+  writes what the console used to show). `python main.py` uses the same
+  folder, so both see the same memories and progress. Older data in
+  `memory/data` etc. is copied there once; the originals are left alone.
+* `Jarvis.exe --self-test` checks a build without starting a session.
+* Rebuilding stops a running Jarvis.exe first (it locks its own files).
+
 ## Tech Stack
 
 * Python

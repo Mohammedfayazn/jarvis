@@ -1,5 +1,7 @@
+import argparse
 import array
 import asyncio
+import datetime
 import logging
 import os
 import queue
@@ -12,6 +14,7 @@ from google import genai
 from google.genai import types
 from websockets.exceptions import ConnectionClosed
 
+import app_paths
 import browser_tools
 import islamic
 import projects
@@ -22,10 +25,31 @@ from audio_runtime import AudioPlayer, UtteranceRecorder
 from memory import assistant as memory_assistant
 from prompts import instruction
 
-# Windows par stdout cp1252 hota hai, emoji crash karte hain - UTF-8 force karein
-if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+LOG_MAX_BYTES = 5_000_000
 
+
+def _setup_output():
+    """Console ho toh UTF-8 (Windows ka cp1252 emoji par crash karta hai).
+    Console na ho (Jarvis.exe, --noconsole) toh print() aur errors log file
+    me jayein - warna sab chupchaap gum ho jata."""
+    if sys.stdout is not None:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        return
+    path = app_paths.log_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and path.stat().st_size > LOG_MAX_BYTES:
+        path.replace(path.with_name(path.name + ".1"))
+    stream = open(path, "a", encoding="utf-8", errors="replace", buffering=1)
+    sys.stdout = sys.stderr = stream
+    print(f"\n===== Jarvis started {datetime.datetime.now():%Y-%m-%d %H:%M:%S} =====")
+
+
+_setup_output()
+
+# API key: pehle Jarvis ke data folder ki .env (packaged app yahi padhta hai),
+# phir code ke paas wali (development)
+load_dotenv(app_paths.env_file())
 load_dotenv()
 
 # Tutor ke kaam ki baatein terminal me (jaise recitation me kya suna gaya);
@@ -1390,11 +1414,17 @@ async def session_once(
         return False
 
 
-async def run():
+async def run(start_asleep: bool = False, open_browser: bool = True):
     api_key = os.environ.get("GOOGLE_API_KEY")
     if not api_key:
-        print("ERROR: .env file mein GOOGLE_API_KEY set karein!")
+        print(f"ERROR: GOOGLE_API_KEY nahi mila - {app_paths.env_file()} me set karein!")
         return
+
+    # Pehle ka data (memory/data, islamic/data ...) ek baar naye data folder
+    # me copy - databases khulne se pehle
+    copied = app_paths.migrate_legacy_data()
+    if copied:
+        print(f"\U0001f4e6 Data {app_paths.home()} me copy hua: {', '.join(copied)}")
 
     # PyAudio ko initialize karein aur streams open karein. Streams reconnect
     # ke aar-paar zinda rehte hain - device baar-baar kholna bekaar risk hai.
@@ -1428,7 +1458,7 @@ async def run():
 
     # HUD pehle uthta hai taaki connect hone ka intezaar screen par dikhe
     bus = ui_server.EventBus()
-    await ui_server.start(bus)
+    await ui_server.start(bus, open_browser=open_browser)
     setup_islamic_tutor(loop, bus, playback, spk_queue)
 
     mic_thread = threading.Thread(
@@ -1463,6 +1493,17 @@ async def run():
     )
 
     wake = load_wake_word()
+
+    # Windows start hone par Jarvis sota hua uthta hai: sirf offline wake
+    # word sunta hai, Gemini tak kuch nahi jata, jab tak "Hey Jarvis" na bolein
+    if start_asleep:
+        if wake is None:
+            print("Wake word nahi chala - isliye jaag kar shuru ho raha hai.")
+        else:
+            print("\U0001f4a4 Jarvis so raha hai. Jagane ke liye bolo: 'Hey Jarvis'")
+            bus.state("sleeping")
+            await wait_for_wake_word(mic_queue, wake)
+            print("Jaag raha hoon!")
 
     delay = 1
     try:
@@ -1545,8 +1586,120 @@ async def run():
         print("Done!")
 
 
-if __name__ == "__main__":
+_INSTANCE_MUTEX = []
+
+
+def _already_running() -> bool:
+    """Ek hi Jarvis: mic aur HUD ports do copies me nahi bant sakte."""
+    import ctypes
+    from ctypes import wintypes
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateMutexW.restype = wintypes.HANDLE
+    kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+    handle = kernel32.CreateMutexW(None, False, "Local\\JarvisVoiceAssistant")
+    already = ctypes.get_last_error() == 183          # ERROR_ALREADY_EXISTS
+    _INSTANCE_MUTEX.append(handle)                    # process ke saath zinda rahe
+    return already
+
+
+def self_test() -> int:
+    """Packaged build ki jaanch, bina Gemini/mic session ke: bundled files,
+    API key, wake word, databases, mic, aur dono speech models. Nateeja
+    console ya (Jarvis.exe me) log file me. Exit code 0 = sab theek."""
+    import time
+    results = []
+
+    def check(name, fn):
+        start = time.time()
+        try:
+            detail = fn() or ""
+            results.append(True)
+            print(f"  OK    {name} {detail} ({time.time() - start:.1f}s)")
+        except Exception as exc:
+            results.append(False)
+            print(f"  FAIL  {name}: {type(exc).__name__}: {exc}")
+
+    print(f"Jarvis self-test - frozen={app_paths.FROZEN}, code={app_paths.CODE_DIR}")
+    print(f"Data folder: {app_paths.home()}")
+
+    def bundled_files():
+        for path in (ui_server.UI_DIR / "index.html", ui_server.UI_DIR / "jarvis.svg",
+                     browser_tools.TABS_SCRIPT):
+            if not path.is_file():
+                raise FileNotFoundError(path)
+    check("bundled HUD + scripts", bundled_files)
+    check("GOOGLE_API_KEY present", lambda: None if os.environ.get("GOOGLE_API_KEY")
+          else (_ for _ in ()).throw(RuntimeError(f"not set - put it in {app_paths.env_file()}")))
+
+    def wake():
+        from wake_word import WakeWordListener
+        listener = WakeWordListener()
+        return f"score on silence {listener.feed(bytes(2560 * 5)):.2f}"
+    check("wake word model", wake)
+
+    def databases():
+        from memory import db as mdb
+        from projects import db as pdb
+        from islamic import db as idb
+        from speech_coach import db as sdb
+        for mod in (mdb, pdb, idb, sdb):
+            mod.connect(mod.DEFAULT_DB_PATH).close()
+        return str(app_paths.home())
+    check("databases", databases)
+
+    def microphone():
+        audio = pyaudio.PyAudio()
+        try:
+            return audio.get_default_input_device_info()["name"]
+        finally:
+            audio.terminate()
+    check("microphone", microphone)
+
+    def quran_model():
+        from islamic.recitation import Transcriber
+        t = Transcriber()
+        if not t.load():
+            raise RuntimeError(t.error)
+        return repr(t.transcribe(bytes(32000)))
+    check("Quran speech model", quran_model)
+
+    def coach_model():
+        from speech_coach.pronunciation import MultilingualTranscriber
+        t = MultilingualTranscriber()
+        if not t.load():
+            raise RuntimeError(t.error)
+        return repr(t.transcribe(bytes(32000), "en"))
+    check("child coach speech model", coach_model)
+
+    ok = all(results)
+    print(f"Self-test {'PASSED' if ok else 'FAILED'}: {sum(results)}/{len(results)} checks")
+    return 0 if ok else 1
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Jarvis voice assistant")
+    parser.add_argument("--start-asleep", action="store_true",
+                        help="sirf 'Hey Jarvis' ka intezaar karke shuru karo (Windows startup)")
+    parser.add_argument("--no-browser", action="store_true",
+                        help="HUD ka browser tab khud mat kholo")
+    parser.add_argument("--self-test", action="store_true",
+                        help="build ki jaanch karke band ho jao (exit code 0 = theek)")
+    args = parser.parse_args(argv)
+
+    if args.self_test:
+        sys.exit(self_test())
+
+    if _already_running():
+        # Shortcut dobara dabaya - naya Jarvis nahi, chalte hue ka HUD kholo
+        import webbrowser
+        webbrowser.open(f"http://{ui_server.HTTP_HOST}:{ui_server.HTTP_PORT}/")
+        print("Jarvis pehle se chal raha hai - HUD khol diya.")
+        return
     try:
-        asyncio.run(run())
+        asyncio.run(run(start_asleep=args.start_asleep, open_browser=not args.no_browser))
     except KeyboardInterrupt:
         print("\nJarvis Stopped. Alvida!")
+
+
+if __name__ == "__main__":
+    main()

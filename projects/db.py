@@ -9,9 +9,11 @@ import logging
 import sqlite3
 from pathlib import Path
 
+import app_paths
+
 logger = logging.getLogger("jarvis.projects.db")
 
-DATA_DIR = Path(__file__).with_name("data")
+DATA_DIR = app_paths.data_dir("projects")
 DEFAULT_DB_PATH = DATA_DIR / "projects.db"
 SCHEMA_VERSION = 1
 

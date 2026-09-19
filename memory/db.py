@@ -10,9 +10,11 @@ import logging
 import sqlite3
 from pathlib import Path
 
+import app_paths
+
 logger = logging.getLogger("jarvis.memory.db")
 
-DEFAULT_DB_PATH = Path(__file__).with_name("data") / "jarvis_memory.db"
+DEFAULT_DB_PATH = app_paths.data_dir("memory") / "jarvis_memory.db"
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS memories (
