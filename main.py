@@ -18,6 +18,7 @@ from websockets.exceptions import ConnectionClosed
 import app_paths
 import browser_tools
 import islamic
+import mode_manager
 import projects
 import speech_coach
 import ui_server
@@ -25,7 +26,6 @@ import whatsapp_handler
 import window_manager
 from audio_runtime import AudioPlayer, UtteranceRecorder
 from memory import assistant as memory_assistant
-from prompts import instruction
 
 LOG_MAX_BYTES = 5_000_000
 
@@ -60,6 +60,7 @@ load_dotenv()
 logging.basicConfig(level=logging.WARNING, format="%(message)s")
 logging.getLogger("jarvis.islamic").setLevel(logging.INFO)
 logging.getLogger("jarvis.whatsapp").setLevel(logging.INFO)
+logging.getLogger("jarvis.mode").setLevel(logging.INFO)
 
 MODEL = "gemini-3.1-flash-live-preview"
 
@@ -572,6 +573,18 @@ def _whatsapp_tools():
             }, required=["recipient", "message"]),
         ),
         types.FunctionDeclaration(
+            name="set_mode",
+            description=(
+                "Kis se baat kar rahe ho: mode 'child' (Zunaira, 4 saal - dheere, "
+                "chhote jumle, zyada intezaar, sirf coach aur Quran tools) ya 'adult' "
+                "(Fayaz). Sirf tab jab koi saaf kahe. Switch nayi baatcheet shuru "
+                "karta hai - jo kehna hai pehle keh do."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "mode": _TEXT("child | adult"),
+            }, required=["mode"]),
+        ),
+        types.FunctionDeclaration(
             name="link_whatsapp",
             description=(
                 "WhatsApp ko Jarvis se jodo: screen par QR code wali window kholta hai aur "
@@ -623,6 +636,23 @@ COACH_TOOLS = {
 }
 
 
+# Kis se baat ho rahi hai - Fayaz (adult) ya Zunaira (child). Switch hone
+# par session dobara jurta hai: pause threshold aur tools connect ke waqt
+# tay hote hain (dekhein mode_manager.py).
+# set_mode kisi bhi thread se aata hai (tool worker), session loop asyncio
+# par hai - isliye event loop ko thread-safe tareeqe se jagaya jata hai.
+MODE_LOOP: asyncio.AbstractEventLoop | None = None
+MODE_SWITCHED: asyncio.Event | None = None
+
+
+def _mode_switched(_profile):
+    if MODE_LOOP is not None and MODE_SWITCHED is not None:
+        MODE_LOOP.call_soon_threadsafe(MODE_SWITCHED.set)
+
+
+MODE = mode_manager.ModeManager(on_switch=_mode_switched)
+
+
 TUTOR: islamic.IslamicTutor | None = None
 COACH: speech_coach.SpeechCoach | None = None
 QURAN_PLAYER: AudioPlayer | None = None
@@ -671,6 +701,8 @@ def setup_islamic_tutor(loop, bus, playback, spk_queue):
     TUTOR = islamic.IslamicTutor(display=show, play=player.play, record=record, notify=notify)
 
     def record_word(on_done, pause, max_seconds, no_speech):
+        # Child Mode me bachchi ko kaatna nahi - uska pause hamesha lamba
+        pause = MODE.record_pause(pause)
         recorder.start(on_done, pause=pause, max_seconds=max_seconds, no_speech=no_speech)
         return True
 
@@ -1265,6 +1297,11 @@ async def handle_tool_call(session, tool_call, bus, sleep_event):
             print(f"\U0001f9f8 {note}")
             first = note.split("\n", 1)[0]
             bus.transcript("system", first if len(first) <= 160 else first[:157] + "...")
+        elif call.name == "set_mode":
+            result = MODE.switch((call.args or {}).get("mode"))
+            note = result.get("message", "")
+            print(f"\U0001f9d1 {note}")
+            bus.transcript("system", note)
         elif call.name in whatsapp_handler.VOICE_TOOLS:
             # Headless Chrome (WhatsApp Web) - seconds, blocking, loop se bahar
             result = await asyncio.to_thread(
@@ -1375,6 +1412,13 @@ async def receive_loop(session, spk_queue, playback, bus, sleep_event):
                     text = " ".join(user_buf)
                     print(f"\U0001f464 User: {text}")
                     bus.transcript("user", text)
+                    # Model ne set_mode na bulaya ho toh bhi bola hua
+                    # jumla kaam kare ("kids mode", "back to me")
+                    asked = mode_manager.detect(text)
+                    if asked and asked != MODE.key:
+                        note = MODE.switch(asked).get("message", "")
+                        print(f"\U0001f9d1 {note}")
+                        bus.transcript("system", note)
                     if COACH is not None:
                         # speech coach session chal raha ho toh bachche ke
                         # jumlon ki lambai/zubaan note hoti hai
@@ -1435,14 +1479,18 @@ async def wait_for_wake_word(mic_queue, wake):
 
 
 async def session_once(
-    client, config, mic_queue, spk_queue, playback, bus, sleep_event
+    client, base_config, mic_queue, spk_queue, playback, bus, sleep_event
 ):
     """Ek Gemini Live session - connect se lekar disconnect tak.
 
-    True lautata hai agar Jarvis ko sula diya gaya (dobara connect nahi
-    karna), warna False - connection gaya, reconnect karo.
+    Config har baar abhi wale mode se banti hai (prompt, pause threshold,
+    tools). True lautata hai agar Jarvis ko sula diya gaya (dobara connect
+    nahi karna), warna False - connection gaya ya mode badla, reconnect karo.
     """
-    print("\nJarvis (Gemini Live) se connect ho raha hai...")
+    config = MODE.live_config(base_config, islamic.ANSWER_POLICY)
+    print(f"\n\U0001f9d1 {MODE.profile.label} - "
+          f"{MODE.profile.pause_seconds:.1f}s pause, ~{MODE.profile.words_per_minute} wpm")
+    print("Jarvis (Gemini Live) se connect ho raha hai...")
     bus.state("connecting")
 
     config = config.model_copy(update={
@@ -1465,13 +1513,24 @@ async def session_once(
             except queue.Empty:
                 break
 
+        # Mode switch ke baad Jarvis pehle bole - warna naya session chup
+        # baithta hai aur bachchi ko pata hi nahi chalta ki ab uski baari hai
+        greeting = MODE.take_greeting()
+        if greeting:
+            await session.send_client_content(
+                turns=types.Content(role="user", parts=[types.Part(text=greeting)]),
+                turn_complete=True,
+            )
+
         sleeper = asyncio.create_task(sleep_event.wait())
+        switcher = asyncio.create_task(MODE_SWITCHED.wait())
         tasks = [
             asyncio.create_task(send_loop(session, mic_queue, playback)),
             asyncio.create_task(
                 receive_loop(session, spk_queue, playback, bus, sleep_event)
             ),
             sleeper,
+            switcher,
         ]
         try:
             # FIRST_COMPLETED, FIRST_EXCEPTION nahi: koi bhi loop ruke - chahe
@@ -1490,9 +1549,16 @@ async def session_once(
         if sleep_event.is_set():
             return True
 
+        if MODE_SWITCHED.is_set():
+            # Naya mode = nayi baatcheet: purani resume na ho
+            MODE_SWITCHED.clear()
+            playback.resume_handle = None
+            print(f"\U0001f9d1 Mode badla - {MODE.profile.label} ke saath naya session")
+            return False
+
         # Jo pehle gira, uska asli exception yahan dobara uthega
         for task in done:
-            if task is not sleeper:
+            if task not in (sleeper, switcher):
                 task.result()
         return False
 
@@ -1538,6 +1604,9 @@ async def run(start_asleep: bool = False, open_browser: bool = True):
     )
 
     loop = asyncio.get_running_loop()
+    # Mode switch ka event isi loop par banta hai (dekhein _mode_switched)
+    global MODE_LOOP, MODE_SWITCHED
+    MODE_LOOP, MODE_SWITCHED = loop, asyncio.Event()
     mic_queue = asyncio.Queue(maxsize=MIC_QUEUE_MAX)
     spk_queue = queue.Queue(maxsize=SPK_QUEUE_MAX)
     playback = Playback()
@@ -1572,8 +1641,8 @@ async def run(start_asleep: bool = False, open_browser: bool = True):
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Laomedeia")
             )
         ),
-        system_instruction=types.Content(parts=[types.Part(
-            text=instruction + "\n\n" + islamic.ANSWER_POLICY)]),
+        # system_instruction, realtime_input_config aur tools har session
+        # me MODE.live_config se aate hain - yahan sirf baaki sab
         # Ghar ki zubaanein - bina iske bachche ki awaaz kabhi Portuguese ya
         # Korean likh di jaati thi
         input_audio_transcription=types.AudioTranscriptionConfig(

@@ -22,6 +22,8 @@ A real-time AI voice assistant built with Python and Google Gemini Live API.
   child - words, say-it-with-me, conversation, picture stories
 * 💬 WhatsApp: reads out unread / today's / recent messages and sends
   dictated replies (English, Hindi, Hinglish, emoji), always asking first
+* 🧑‍🤝‍🧑 User profiles: "speak to my daughter" switches Jarvis to Child Mode -
+  short slow sentences, long pauses, and only the child's tools
 
 ## Installation
 
@@ -320,6 +322,54 @@ Voice examples: "add Zunaira, she's 4, Dutch English and Hindi, mostly
 Dutch", "start Zunaira's speech practice", "next", "teach her animal
 words in Dutch", "practise the word rabbit", "story time", "how is
 Zunaira doing this week?".
+
+### User profiles - Adult Mode and Child Mode
+
+Jarvis talks to two very different people. `mode_manager.py` keeps one
+`Profile` for each and rebuilds the session when it changes.
+
+```
+                      Adult Mode (Fayaz)     Child Mode (Zunaira, 4)
+system prompt         ADULT_SYSTEM_PROMPT    CHILD_SYSTEM_PROMPT
+speaking pace         ~180 wpm               ~120 wpm, 1-2 short sentences
+end-of-turn silence   1.2 s                  4.0 s
+recorder pause floor  1.5 s                  4.0 s
+tools in the session  all 43                 13: coach + Quran + the way back
+```
+
+Say **"Jarvis, speak to my daughter"**, "Zunaira se baat karo" or "kids
+mode" to switch; **"Jarvis, back to me"**, "mujhse baat karo" or "adult
+mode" to switch back. The model calls the `set_mode` tool, and main.py
+also matches the spoken phrase itself (`mode_manager.detect`), so a clear
+phrase still works when the model misses the tool. Switching to the mode
+already active does nothing, so the two paths never fight.
+
+A switch reconnects the Live session with the new profile and **starts a
+fresh conversation** - the adult talk isn't in the child's context - and
+Jarvis opens with a greeting for whoever it is now talking to. Reconnecting
+is necessary: the pause threshold and the tool list are fixed when a
+session connects. It costs a second or two.
+
+**The pause threshold is what matters most with a 4-year-old.** She stops
+mid-sentence to think, and at the adult's 1.2 s Jarvis talks over her. In
+Child Mode the Live API's `silence_duration_ms` is 4 s, end-of-speech
+sensitivity is LOW, and word practice (`UtteranceRecorder`) never uses a
+pause shorter than 4 s either.
+
+**Child Mode is also a safety boundary**, not only a persona: the WhatsApp,
+window, project and memory tools are not in the session at all, so nothing
+she says can send a message or close a window. Tested: asked to send a
+WhatsApp in Child Mode, Jarvis simply answers that it can't.
+
+**Speaking rate is guidance, not a setting.** The Live API has no
+speaking-rate parameter (`SpeechConfig` is voice and language), and the
+audio arrives as finished speech. The "words per minute" in each profile
+goes into the prompt - the model follows it loosely. Making it exact would
+mean time-stretching the audio in the playback path, which isn't done here.
+
+```bash
+python examples/mode_switch_demo.py     # what each spoken line does, no API
+```
 
 ### WhatsApp
 
