@@ -21,6 +21,7 @@ import islamic
 import mode_manager
 import projects
 import speech_coach
+import system_control
 import ui_server
 import whatsapp_handler
 import window_manager
@@ -61,6 +62,7 @@ logging.basicConfig(level=logging.WARNING, format="%(message)s")
 logging.getLogger("jarvis.islamic").setLevel(logging.INFO)
 logging.getLogger("jarvis.whatsapp").setLevel(logging.INFO)
 logging.getLogger("jarvis.mode").setLevel(logging.INFO)
+logging.getLogger("jarvis.system").setLevel(logging.INFO)
 
 MODEL = "gemini-3.1-flash-live-preview"
 
@@ -532,6 +534,112 @@ def _coach_tools():
                 "focus_language": _LANG,
                 "days": types.Schema(type=types.Type.INTEGER, description="Dashboard kitne din ka (default 7)."),
             }, required=["action"]),
+        ),
+    ]
+
+
+def _system_tools():
+    """Computer ke controls (system_control.py) - awaaz, screen, files, power."""
+    return [
+        types.FunctionDeclaration(
+            name="control_volume",
+            description=(
+                "Computer ki awaaz: action 'set' (percent chahiye), 'up'/'down' "
+                "(percent = kitna, default 10), 'mute', 'unmute', ya 'status' "
+                "(abhi kitni hai). Yeh master volume hai, kisi ek app ka nahi."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("set | up | down | mute | unmute | status"),
+                "percent": types.Schema(type=types.Type.NUMBER,
+                                        description="0-100 (set), ya kitna badhana/ghatana."),
+            }),
+        ),
+        types.FunctionDeclaration(
+            name="control_brightness",
+            description=(
+                "Screen ki roshni: action 'set' (percent), 'up'/'down' (percent, "
+                "default 10), 'status'. display khali = saare monitor; warna "
+                "monitor ka naam ('Philips')."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("set | up | down | status"),
+                "percent": types.Schema(type=types.Type.NUMBER, description="0-100."),
+                "display": _TEXT("Optional monitor ka naam."),
+            }),
+        ),
+        types.FunctionDeclaration(
+            name="manage_files",
+            description=(
+                "Folder aur file ka kaam: action 'create_folder' (path), 'list' "
+                "(andar kya hai), 'move' (path -> destination), 'delete' "
+                "(Recycle Bin me - pehle needs_confirmation aata hai). Path poora "
+                "bolo jaisa user ne kaha: 'D:\\Projects\\Jarvis_Logs'."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("create_folder | list | move | delete"),
+                "path": _TEXT("Poora path, jaise D:\\Data ya C:\\Users\\syeda\\Documents."),
+                "destination": _TEXT("Sirf move: kahan le jana hai."),
+                "confirm_token": _CONFIRM_TOKEN,
+            }, required=["action", "path"]),
+        ),
+        types.FunctionDeclaration(
+            name="power_control",
+            description=(
+                "Computer band/chalu: action 'shutdown', 'restart' (dono pehle "
+                "needs_confirmation dete hain, seconds = kitni der baad, default 60), "
+                "'cancel' (shutdown roko), 'lock' (screen lock), 'sleep', "
+                "'hibernate'. Sirf tab jab user saaf kahe."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("shutdown | restart | lock | sleep | hibernate | cancel"),
+                "seconds": types.Schema(type=types.Type.INTEGER,
+                                        description="Shutdown/restart se pehle ka waqt (default 60)."),
+                "confirm_token": _CONFIRM_TOKEN,
+            }, required=["action"]),
+        ),
+        types.FunctionDeclaration(
+            name="media_control",
+            description=(
+                "Keyboard ki media keys: action 'playpause', 'next', 'previous'. "
+                "Jo bhi app gaana chala raha hai (Spotify, YouTube) usi par lagta hai. "
+                "YouTube par kuch NAYA lagana ho toh play_on_youtube use karo."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("playpause | next | previous"),
+            }, required=["action"]),
+        ),
+        types.FunctionDeclaration(
+            name="manage_apps",
+            description=(
+                "Apps: action 'open' (naam se app kholo), 'list' (kya kya chal raha "
+                "hai), 'force_close' (naam ka har process band - unsaved kaam chala "
+                "jayega, isliye pehle needs_confirmation). Window band karni ho toh "
+                "close_window behtar hai: woh X button hai, app save poochh sakta hai."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("open | list | force_close"),
+                "name": _TEXT("App ka naam jaisa user ne kaha ('notepad', 'chrome')."),
+                "confirm_token": _CONFIRM_TOKEN,
+            }, required=["action"]),
+        ),
+        types.FunctionDeclaration(
+            name="clipboard",
+            description=(
+                "Clipboard: action 'read' (abhi kya copy hua hai - padh kar sunao) "
+                "ya 'write' (text clipboard me daalo, user paste kar sake)."
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={
+                "action": _TEXT("read | write"),
+                "text": _TEXT("Sirf write: kya daalna hai."),
+            }),
+        ),
+        types.FunctionDeclaration(
+            name="system_status",
+            description=(
+                "Ek nazar me computer: battery (kitni hai, charging par hai ya nahi), "
+                "volume aur brightness. 'battery kitni hai?', 'PC kaisa hai?'"
+            ),
+            parameters=types.Schema(type=types.Type.OBJECT, properties={}),
         ),
     ]
 
@@ -1079,6 +1187,7 @@ TOOLS = [
                 ),
             ),
         ] + _project_tools() + _islamic_tools() + _coach_tools() + _whatsapp_tools()
+          + _system_tools()
     )
 ]
 
@@ -1295,6 +1404,14 @@ async def handle_tool_call(session, tool_call, bus, sleep_event):
             result = await asyncio.to_thread(COACH_TOOLS[call.name], call.args or {})
             note = result.get("message", "")
             print(f"\U0001f9f8 {note}")
+            first = note.split("\n", 1)[0]
+            bus.transcript("system", first if len(first) <= 160 else first[:157] + "...")
+        elif call.name in system_control.VOICE_TOOLS:
+            # COM (volume), monitors, disk, subprocess - sab blocking
+            result = await asyncio.to_thread(
+                system_control.VOICE_TOOLS[call.name], call.args or {})
+            note = result.get("message", "")
+            print(f"\U0001f5a5\ufe0f {note}")
             first = note.split("\n", 1)[0]
             bus.transcript("system", first if len(first) <= 160 else first[:157] + "...")
         elif call.name == "set_mode":
@@ -1841,6 +1958,12 @@ def self_test() -> int:
             raise RuntimeError(t.error)
         return repr(t.transcribe(bytes(32000), "en"))
     check("child coach speech model", coach_model)
+
+    def system_controls():
+        import system_control
+        volume = system_control.SystemController().volume_status()
+        return volume["message"]
+    check("system controls (volume)", system_controls)
 
     def whatsapp():
         from pathlib import Path

@@ -27,3 +27,11 @@ transformers
 # Installed Chrome (ya Edge) hi use hota hai, alag browser download nahi.
 # Ek baar link karo:  python whatsapp_handler.py login
 playwright
+# System controls (system_control.py) - awaaz, screen ki roshni, power.
+# pyautogui, psutil upar pehle se hain (media keys, battery, processes).
+pycaw
+comtypes
+screen-brightness-control
+pyperclip
+# Delete hamesha Recycle Bin me jata hai - iske bina delete chalta hi nahi
+send2trash

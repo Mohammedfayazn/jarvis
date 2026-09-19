@@ -24,6 +24,8 @@ A real-time AI voice assistant built with Python and Google Gemini Live API.
   dictated replies (English, Hindi, Hinglish, emoji), always asking first
 * 🧑‍🤝‍🧑 User profiles: "speak to my daughter" switches Jarvis to Child Mode -
   short slow sentences, long pauses, and only the child's tools
+* 🖥️ System controls: volume, screen brightness, folders and files, battery,
+  media keys, clipboard, and power - with the risky ones asking first
 
 ## Installation
 
@@ -322,6 +324,58 @@ Voice examples: "add Zunaira, she's 4, Dutch English and Hindi, mostly
 Dutch", "start Zunaira's speech practice", "next", "teach her animal
 words in Dutch", "practise the word rabbit", "story time", "how is
 Zunaira doing this week?".
+
+### System controls
+
+`system_control.py` is Jarvis's hands on the machine itself - all local,
+nothing over the network.
+
+```
+SystemController
+  volume_status / set_volume / change_volume / mute      pycaw
+  brightness_status / set_brightness / change_brightness screen-brightness-control
+  create_folder / list_folder / move / delete            pathlib + shutil + send2trash
+  power("shutdown"|"restart"|"lock"|"sleep"|             shutdown.exe, rundll32
+        "hibernate"|"cancel")
+  media("playpause"|"next"|"previous")                   pyautogui media keys
+  battery / running_apps / open_app / force_close_app    psutil
+  clipboard_read / clipboard_write                       pyperclip
+  status()                                               battery + volume + brightness
+```
+
+Voice: "awaaz kam karo", "volume 30 par rakho", "screen thodi kam karo",
+"D drive par Jarvis_Logs folder banao", "us folder me kya hai?", "battery
+kitni hai?", "gaana rok do", "notepad kholo", "computer lock karo",
+"shutdown karo" (then "cancel shutdown" while it counts down).
+
+**What it refuses.** Windows's own folders and Program Files, a whole
+drive, your main folders, and Jarvis's own data and code - the places a
+misheard word could not be undone. It won't kill the processes Windows
+needs, or the Jarvis process it runs in.
+
+**What it asks about first.** Deleting, shutting down, restarting,
+hibernating and force-closing an app return `needs_confirmation` with a
+`confirm_token`. Jarvis reads out what would happen and only calls again
+with that token after you clearly say yes. A token is tied to that exact
+action, so a token for one file can't delete another, and a "restart in 60"
+token can't shut the machine down.
+
+**Deleting goes to the Recycle Bin** (send2trash). Without that library
+Jarvis says so and deletes nothing, rather than removing a file for good.
+
+**Child Mode has none of this** (see the profiles section): the tools are
+not in the child's session at all.
+
+```bash
+python system_control.py system_status
+python system_control.py control_volume action=set percent=30
+python examples/system_intents_demo.py --run   # spoken line -> which tool
+```
+
+Volume goes through the default playback device, so it follows your
+headset. Brightness needs a monitor that answers DDC/CI: a laptop screen
+always does, an external monitor usually needs it enabled in its own menu,
+and one that refuses is named in the answer instead of failing the call.
 
 ### User profiles - Adult Mode and Child Mode
 

@@ -24,6 +24,10 @@ hiddenimports = (
     # transformers loads model classes lazily by name
     collect_submodules("transformers.models.whisper")
     + ["win32timezone"]                    # pywin32, used by win32com at runtime
+    # pycaw/comtypes build COM interfaces at runtime, and
+    # screen-brightness-control picks its backend by platform
+    + collect_submodules("pycaw")
+    + collect_submodules("screen_brightness_control")
 )
 
 a = Analysis(
