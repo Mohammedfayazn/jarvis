@@ -16,6 +16,9 @@ datas = [
 ]
 # openWakeWord's ONNX models (mel spectrogram, embedding, "hey jarvis")
 datas += collect_data_files("openwakeword")
+# Playwright's driver (node.exe + JS) for WhatsApp Web. The browser itself
+# is the installed Chrome/Edge, so nothing else is bundled.
+datas += collect_data_files("playwright")
 
 hiddenimports = (
     # transformers loads model classes lazily by name

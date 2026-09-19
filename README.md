@@ -20,6 +20,8 @@ A real-time AI voice assistant built with Python and Google Gemini Live API.
   memorisation tests with pronunciation feedback, sourced answers
 * 🧸 Child speech coach: playful English/Dutch/Hindi practice for a young
   child - words, say-it-with-me, conversation, picture stories
+* 💬 WhatsApp: reads out unread / today's / recent messages and sends
+  dictated replies (English, Hindi, Hinglish, emoji), always asking first
 
 ## Installation
 
@@ -318,6 +320,60 @@ Voice examples: "add Zunaira, she's 4, Dutch English and Hindi, mostly
 Dutch", "start Zunaira's speech practice", "next", "teach her animal
 words in Dutch", "practise the word rabbit", "story time", "how is
 Zunaira doing this week?".
+
+### WhatsApp
+
+`whatsapp_handler.py` drives WhatsApp Web with Playwright in a headless
+Chrome that has its own profile (`%LOCALAPPDATA%\Jarvis\whatsapp\profile`),
+so the QR code is scanned once and never again.
+
+**One-time setup**
+
+```bash
+pip install playwright
+python whatsapp_handler.py login
+```
+
+`login` opens a visible Chrome window: scan the QR code with WhatsApp on
+your phone (Settings > Linked devices > Link a device) and wait until the
+chats appear. It uses the Chrome (or Edge) already installed, so
+`playwright install` isn't needed. Stop Jarvis first - a profile can only
+be open in one browser at a time. After that, Jarvis opens WhatsApp Web in
+the background whenever it starts.
+
+```
+WhatsAppManager
+  send_message(recipient, text)          contact name or +country-code number
+  get_unread_messages(filter_mode)       "unread" | "today" | "recent" (hours=N)
+  summarize_and_prompt_reply(mode)       spoken summary + the message list
+voice tools (main.py)
+  check_whatsapp                         -> summarize_and_prompt_reply
+  send_whatsapp                          -> find chat, confirm, send_message
+```
+
+* **Reading never opens a chat**, so nothing is marked as read. It sees the
+  chat list: the latest message of each chat, its time and unread count.
+* **Sending always asks first.** The first `send_whatsapp` call only finds
+  the chat and returns a `confirm_token`; Jarvis reads back the name and
+  the exact text, and sends after you say yes. The compose box is read
+  back before sending - if the text arrived changed (mangled Devanagari,
+  lost characters), nothing is sent.
+* Incoming messages are treated as text to read out, never as
+  instructions to Jarvis.
+* WhatsApp Web refuses headless Chrome's user agent ("database error ...
+  relink your device"); the handler uses the normal Chrome user agent.
+* Try it without Jarvis: `python whatsapp_handler.py status`,
+  `read today`, `read recent --hours 3`, `send "Rahul" "Main aa raha hoon 👍"`
+  (add `--show` to watch the browser).
+
+WhatsApp changes its web page often. Each element has several fallback
+selectors, but if reading or sending stops working after a WhatsApp
+update, the selectors at the top of `whatsapp_handler.py` are the place
+to look.
+
+Voice examples: "WhatsApp pe kuch aaya?", "aaj ke WhatsApp messages
+batao", "pichhle do ghante me kisne message kiya?", "Rahul ko WhatsApp
+karo ke main 5 baje aaunga", "haan, Priya ko reply karo: draft dekh liya".
 
 ## Tests
 

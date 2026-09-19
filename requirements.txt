@@ -23,3 +23,7 @@ sentence-transformers
 # for word practice (openai/whisper-base, ~290 MB, downloaded on first use).
 torch
 transformers
+# WhatsApp (whatsapp_handler.py) - WhatsApp Web ko Chrome me chalata hai.
+# Installed Chrome (ya Edge) hi use hota hai, alag browser download nahi.
+# Ek baar link karo:  python whatsapp_handler.py login
+playwright
