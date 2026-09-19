@@ -167,8 +167,8 @@ def clean_text(text: str | None) -> str:
 
     Keeps newlines, tabs and the zero-width joiners that emoji sequences and
     Devanagari conjuncts need; drops direction marks and other control
-    characters, and replaces
-    lone surrogates (which cannot be encoded as UTF-8) with "?".
+    characters, and replaces lone surrogates (which cannot be encoded as
+    UTF-8) with "?".
     """
     if not text:
         return ""
@@ -531,16 +531,20 @@ _SCROLL_JS = r"""(top) => {
   return pane.scrollTop !== before;
 }"""
 
-_LAST_OUT_JS = "() => {" + _TEXT_OF_JS + r"""
+# The newest message in the open chat. Its direction isn't marked reliably
+# any more (no .message-out class, ids without the old "true_" prefix), so
+# sending is confirmed by a NEW message id with our text instead.
+_LAST_MSG_JS = "() => {" + _TEXT_OF_JS + r"""
   const main = document.querySelector('#main');
   if (!main) return null;
-  const outs = main.querySelectorAll('.message-out');
-  const last = outs[outs.length - 1];
-  if (!last) return {count: 0, text: '', icons: []};
-  const body = last.querySelector('.copyable-text .selectable-text')
+  const withId = [...main.querySelectorAll('[data-id]')];
+  const msgs = withId.filter(e => e.querySelector('[data-pre-plain-text], .selectable-text'));
+  const last = (msgs.length ? msgs : withId).pop();
+  if (!last) return {id: '', text: '', icons: []};
+  const body = last.querySelector('[data-pre-plain-text] .selectable-text')
             || last.querySelector('.selectable-text') || last;
   return {
-    count: outs.length,
+    id: last.getAttribute('data-id') || '',
     text: textOf(body),
     icons: [...last.querySelectorAll('[data-icon]')].map(e => e.getAttribute('data-icon')),
   };
@@ -1105,22 +1109,24 @@ class WhatsAppManager:
             self._page.keyboard.press("Enter")
 
     def _confirm_sent(self, text: str, before: dict | None) -> str:
-        """sent | queued, after the new bubble shows up - or send_failed."""
+        """sent | queued, once a new message with our text shows up - or
+        send_failed."""
         page = self._page
         want = letters_only(text)
         deadline = time.monotonic() + 10
         while time.monotonic() < deadline:
             page.wait_for_timeout(400)
-            last = page.evaluate(_LAST_OUT_JS)
-            if not last:
+            last = page.evaluate(_LAST_MSG_JS)
+            if not last or not last["id"]:
                 continue
-            changed = before is None or last != before
+            changed = before is None or last["id"] != before.get("id")
             if changed and want and letters_only(last["text"]).endswith(want[-60:]):
                 icons = " ".join(i or "" for i in last["icons"])
                 return "queued" if "time" in icons else "sent"
         composer = self._first(SEL_COMPOSER)
         if composer is not None and not letters_only(composer.evaluate(_ELEMENT_TEXT_JS)):
             # Box emptied, bubble not recognised - WhatsApp took it
+            log.warning("WhatsApp: sent, but the new message wasn't found to confirm it")
             return "sent"
         raise WhatsAppError("send_failed", "I typed the message but WhatsApp didn't send it.")
 
@@ -1129,7 +1135,7 @@ class WhatsAppManager:
         recipient = clean_text(recipient)
         digits = phone_digits(recipient)
         name = self._open_chat_by_number(digits) if digits else self._open_chat_by_name(recipient)
-        before = self._page.evaluate(_LAST_OUT_JS)
+        before = self._page.evaluate(_LAST_MSG_JS)
         self._type_message(text)
         self._click_send()
         status = self._confirm_sent(text, before)
