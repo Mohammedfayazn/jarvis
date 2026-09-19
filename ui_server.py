@@ -17,6 +17,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import websockets
+from websockets.exceptions import ConnectionClosed
 
 UI_DIR = Path(__file__).parent / "ui"
 
@@ -68,6 +69,8 @@ class EventBus:
             # Gemini tak nahi jata, isliye awaaz se rokna mumkin nahi.
             async for message in websocket:
                 self._command(message)
+        except ConnectionClosed:
+            pass            # tab band hua / sleep - normal hai, traceback nahi
         finally:
             self._clients.discard(websocket)
 

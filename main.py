@@ -30,9 +30,10 @@ LOG_MAX_BYTES = 5_000_000
 
 def _setup_output():
     """Console ho toh UTF-8 (Windows ka cp1252 emoji par crash karta hai).
-    Console na ho (Jarvis.exe, --noconsole) toh print() aur errors log file
-    me jayein - warna sab chupchaap gum ho jata."""
-    if sys.stdout is not None:
+    Jarvis.exe (--noconsole) me print() aur errors hamesha log file me - chahe
+    terminal se chalaya ho: tab stdout terminal ka mil jata hai, aur wahan
+    koi use padh nahi raha hota."""
+    if sys.stdout is not None and not app_paths.FROZEN:
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding="utf-8", errors="replace")
         return
@@ -1039,6 +1040,9 @@ class Playback:
         self.quran_player = None
         self.recorder = None
         self.session = None
+        # Session resumption handle - reconnect par wahi baatcheet; sone ke
+        # baad None, taaki jaagna hamesha nayi baatcheet ho
+        self.resume_handle = None
 
 
 def _offer(q, item):
@@ -1249,6 +1253,13 @@ async def receive_loop(session, spk_queue, playback, bus, sleep_event):
 
     while True:
         async for response in session.receive():
+            # Server baar-baar naya "resume handle" deta hai. Connection toote
+            # toh isi se wahi baatcheet aage chalti hai (sabaq beech me na
+            # chhoote).
+            update = response.session_resumption_update
+            if update and update.resumable and update.new_handle:
+                playback.resume_handle = update.new_handle
+
             # Tool call alag rasta hai - iske saath server_content nahi aata
             if response.tool_call:
                 if await handle_tool_call(
@@ -1366,6 +1377,10 @@ async def session_once(
     print("\nJarvis (Gemini Live) se connect ho raha hai...")
     bus.state("connecting")
 
+    config = config.model_copy(update={
+        "session_resumption": types.SessionResumptionConfig(handle=playback.resume_handle)})
+    if playback.resume_handle:
+        print("Pichhli baatcheet wahin se aage badh rahi hai (resumed).")
     async with client.aio.live.connect(model=MODEL, config=config) as session:
         print("Connected! Bolna shuru karein (Ctrl+C se band karein)\n")
         playback.connected = True
@@ -1487,7 +1502,13 @@ async def run(start_asleep: bool = False, open_browser: bool = True):
         ),
         system_instruction=types.Content(parts=[types.Part(
             text=instruction + "\n\n" + islamic.ANSWER_POLICY)]),
-        input_audio_transcription=types.AudioTranscriptionConfig(),
+        # Ghar ki zubaanein - bina iske bachche ki awaaz kabhi Portuguese ya
+        # Korean likh di jaati thi
+        input_audio_transcription=types.AudioTranscriptionConfig(
+            language_codes=["en-US", "hi-IN", "ur-IN", "nl-NL"]),
+        # Lambi sessions (poora sabaq) Live API ki time limit par na katein
+        context_window_compression=types.ContextWindowCompressionConfig(
+            sliding_window=types.SlidingWindow()),
         output_audio_transcription=types.AudioTranscriptionConfig(),
         tools=TOOLS,
     )
@@ -1531,6 +1552,8 @@ async def run(start_asleep: bool = False, open_browser: bool = True):
                         playback.quran_player.stop()
                     if playback.recorder:
                         playback.recorder.cancel()
+                    # jaagne par nayi baatcheet - purani resume na ho
+                    playback.resume_handle = None
                     bus.state("sleeping")
                     await wait_for_wake_word(mic_queue, wake)
                     print("\n\U0001f44b 'Hey Jarvis' suna - jaag raha hoon!")
